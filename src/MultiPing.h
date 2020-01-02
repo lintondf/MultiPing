@@ -50,7 +50,36 @@ namespace MultiPing {
 
 
     class Units {
+        public:
+            static inline unsigned long s2us( unsigned long ms) {
+                return ms * 1000000ul;
+            }
+            static inline unsigned long ms2us( unsigned long ms) {
+                return ms * 1000ul;
+            }
 
+            static void setTemperature( int dC );
+
+            static inline unsigned long us2mm( unsigned long us ) {
+                //printf("%lu %d %d %d\n", us, iSoS, speedOfSound[iSoS].ms, speedOfSound[iSoS].mms );
+                //printf(" %lu %lu\n", (((unsigned long)speedOfSound[iSoS].ms)*us),
+                //    (((unsigned long)speedOfSound[iSoS].mms)*(us/1000L)) );
+                return  (((unsigned long)speedOfSound[iSoS].ms)*us) / 1000L + 
+                        (((unsigned long)speedOfSound[iSoS].mms)*(us/1000L)) / 1000L;
+            }
+
+            static float us2m( unsigned long us );
+            static float us2cm( unsigned long us );
+            static float us2ft( unsigned long us );
+            static float us2in( unsigned long us );
+        protected:
+            static int cT; // C temperature
+            static const int nSoS = 17;
+            typedef struct {int ms; int mms;} SoS_t;
+            // indexed by T(C)/5; T in range -30 to 50
+            //   [0] m/s, [1] remainder mm/s  
+            static SoS_t speedOfSound[nSoS];
+            static int iSoS;
     };
 
     class Task {
@@ -125,8 +154,8 @@ namespace MultiPing {
                 public:
                     Handler() {};
                     virtual ~Handler() {};
-                    virtual void event( Task* task, long usecEventParameter ) = 0;
-                    virtual void error( Task* task, long errorCode ) {
+                    virtual void event( Sonar* task, long usecOneWay ) = 0;
+                    virtual void error( Sonar* task, long errorCode ) {
                         event( task, errorCode ); // default is to handle errors as events
                     }
             };

@@ -226,10 +226,65 @@ namespace MultiPing {
             }
             return false;
         }
-        if (handler) handler->event(this, now - echoStart);
+        if (handler) handler->event(this, unsignedDistance(now, echoStart)/2 );
         state = States::START_PING;
         recycle(now);
         return true;
     }
+
+    int Units::iSoS = (0 + 30)/5;
+    int Units::cT = 0;
+    Units::SoS_t Units::speedOfSound[nSoS] = {
+        {312,	512},
+        {315,	709},
+        {318,	873},
+        {322,	7},
+        {325,	110},
+        {328,	185},
+        {331,	230},
+        {334,	248},
+        {337,	239},
+        {340,	203},
+        {343,	142},
+        {346,	56},
+        {348,	946},
+        {351,	812},
+        {354,	655},
+        {357,	475},
+        {360,	273}
+    };
+
+    void Units::setTemperature( int dC ) {
+        dC = std::max(-30,dC);
+        dC = std::min(+50,dC);
+        cT = dC;
+        iSoS = (dC+30)/5;
+    }
+
+    float Units::us2m( unsigned long us ) {
+        float dT = ((float)cT) - (5.0*(float)iSoS - 30.0);
+        if (iSoS+1 < nSoS) {
+            float a = (float) speedOfSound[iSoS].ms + 0.001 * (float) speedOfSound[iSoS].mms;
+            float b = (float) speedOfSound[iSoS+1].ms + 0.001 * (float) speedOfSound[iSoS+1].mms;
+            return a + dT * (b - a) / 5.0;
+        } else {
+            float a = (float) speedOfSound[iSoS-1].ms + 0.001 * (float) speedOfSound[iSoS-1].mms;
+            float b = (float) speedOfSound[iSoS].ms + 0.001 * (float) speedOfSound[iSoS].mms;
+            return b + dT * (b - a) / 5.0;
+        }
+    }
+
+    float Units::us2cm( unsigned long us ) {
+        return 100.0*us2m(us);
+    }
+
+    float Units::us2ft( unsigned long us ) {
+        return us2m(us)/0.3048;
+    }
+
+    float Units::us2in( unsigned long us ) {
+        return 12.0 * us2ft(us);
+    }
+
 
 } // namespace MultiPing

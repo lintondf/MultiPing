@@ -19,17 +19,16 @@
 #if defined(__AVR__)
 #include <avr/interrupt.h>
 #include <avr/io.h>
+#include <avr/pgmspace.h>
 #endif
 
-#include <ArduinoSTL.h>
-#include <list>
-#include <PriorityQueue.h>
+#include <Task.h>
 
 namespace MultiPing {
 
 #include <GPIO.h>
 
-
+#if 0
     inline int compareUnsigned( unsigned long a, unsigned long b ) {
         unsigned long d0 = a - b;
         //printf("d0 %8lu\n", d0);
@@ -47,7 +46,7 @@ namespace MultiPing {
     inline unsigned long unsignedDistance( unsigned long a, unsigned long b ) {
         return std::min( a-b, b-a );
     }
-
+#endif
 
     class Units {
         public:
@@ -75,13 +74,12 @@ namespace MultiPing {
         protected:
             static int cT; // C temperature
             static const int nSoS = 17;
-            typedef struct {int ms; int mms;} SoS_t;
+            typedef struct {int ms; int mms;} SoS_t; // m/s, remainder mm/s 
             // indexed by T(C)/5; T in range -30 to 50
-            //   [0] m/s, [1] remainder mm/s  
-            static SoS_t speedOfSound[nSoS];
+            static const PROGMEM SoS_t speedOfSound[nSoS];
             static int iSoS;
     };
-
+#if 0
     class Task {
         public:
             Task(int id) : id(id) {}
@@ -90,10 +88,6 @@ namespace MultiPing {
                 return id;
             }
             virtual bool dispatch(unsigned long now);
-
-            void enqueueShort(unsigned long usecDelay);
-            void enqueueLong(unsigned long usecDelay);
-            void waitEvent();
 
             static inline bool lessThan( Task* lhs, Task* rhs) {
                 //printf("lessThan %p %2d %8lu %8lu\n", lhs, lhs->getId(), lhs->whenEnqueued, lhs->usecDelay );
@@ -105,9 +99,9 @@ namespace MultiPing {
 
             static void run();
             static void print(unsigned long now);
-            static void enqueueShort( Task* task );
-            static void enqueueLong( Task* task );
-            static void wait( Task* task );
+            void enqueueShort(unsigned long usecDelay);
+            void enqueueLong(unsigned long usecDelay);
+            void waitEvent();
 
         protected:
             int id;
@@ -130,6 +124,7 @@ namespace MultiPing {
             static PriorityQueue<Task*> slowQueue;
 
     };
+#endif
 
     class Device {
         public:
@@ -159,7 +154,7 @@ namespace MultiPing {
                         event( task, errorCode ); // default is to handle errors as events
                     }
             };
-            Sonar(int id, IGPIO &trigger, IGPIO &echo, Device& device = defaultDevice ) : Task(id),
+            Sonar(int id, IGPIO &trigger, IGPIO &echo, Device* device = &defaultDevice ) : Task(id),
                 device(device),
                 trigger(trigger),
                 echo(echo),
@@ -181,8 +176,8 @@ namespace MultiPing {
 
             bool dispatch(unsigned long now);
 
+            const Device* device;
         protected:
-            Device& device;
             IGPIO &trigger;
             IGPIO &echo;
             Handler* handler;
@@ -198,9 +193,6 @@ namespace MultiPing {
                         WAIT_ECHO };        // runs waitEchoComplete()
             States state;
 
-            void enqueueShort(unsigned long usecDelay);
-            void enqueueLong(unsigned long usecDelay);
-            void waitEvent();
             void recycle(unsigned long now);
 
             bool triggerStartPing(unsigned long now);

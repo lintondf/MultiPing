@@ -1,6 +1,7 @@
 #include <MultiPing.h>
 
-#define DEBUG 1 // 5288/505 vs 8038/694
+
+#define DEBUG 3 // 5288/505 vs 8038/694
 #if DEBUG
 #include <RunningStatistics.h>
 #endif
@@ -8,6 +9,7 @@
 
 namespace MultiPing {
 
+#if 0
     std::list<Task*>     Task::waiting;
     PriorityQueue<Task*> Task::fastQueue(Task::lessThan);
     PriorityQueue<Task*> Task::slowQueue(Task::lessThan);
@@ -35,8 +37,8 @@ namespace MultiPing {
         }
 #endif    
         cycleCount++;
-        if (DEBUG > 3) printf("run %8lu %8lu %u:%d/%d:%d/%d\n", now, cycleCount, waiting.size(), 
-            slowQueue.size(), slowQueue.isEmpty(), fastQueue.size(), fastQueue.isEmpty() );
+        //if (DEBUG > 3) printf("run %8lu %8lu %u:%d/%d:%d/%d\n", now, cycleCount, waiting.size(), 
+        //    slowQueue.size(), slowQueue.isEmpty(), fastQueue.size(), fastQueue.isEmpty() );
         if (!slowQueue.isEmpty()) {
             // if the top is not ready neither is anyone else
             if (ready(now, slowQueue.peek())) {
@@ -66,36 +68,26 @@ namespace MultiPing {
         }
     }
 
-    void Task::enqueueShort( Task* task ) {
-        fastQueue.push(task);
-    }
 
-    void Task::enqueueLong( Task* task ) {
-        slowQueue.push(task);
-    }
-
-    void Task::wait( Task* task ) {
-        waiting.push_back(task);
-    }
-
-    Device Sonar::defaultDevice;
-
-    void Sonar::enqueueShort(unsigned long usecDelay) {
+    void Task::enqueueShort(unsigned long usecDelay) {
         this->whenEnqueued = micros();
         this->usecDelay = usecDelay;
-        Task::enqueueShort( this );
+        fastQueue.push(this);
     }
 
-    void Sonar::enqueueLong(unsigned long usecDelay) {
+    void Task::enqueueLong(unsigned long usecDelay) {
         this->whenEnqueued = micros();
         this->usecDelay = usecDelay;
         //printf("enqueue %p %8lu %8lu\n", this, this->whenEnqueued, this->usecDelay );
-        Task::enqueueLong( this );
+        slowQueue.push(this);
     }
 
-    void Sonar::waitEvent() {
-        Task::wait(this);
+    void Task::waitEvent() {
+        waiting.push_back(this);
     }
+#endif
+
+    Device Sonar::defaultDevice;
 
     void Sonar::recycle(unsigned long now) {
         unsigned long t = unsignedDistance( now, cycleStart );
@@ -104,7 +96,7 @@ namespace MultiPing {
         usecDelay = usCycleTime - t;
         whenEnqueued = now;
         if (DEBUG > 2) printf("recycle %8lu %8lu %8lu\n", micros(), whenEnqueued, usecDelay );
-        Task::enqueueLong(this);
+        Task::getLongQueue().push_priority(this);
     }
 
     bool Sonar::start(unsigned long usStartDelay, unsigned long usCycleTime, Handler* handler ) {
@@ -117,7 +109,7 @@ namespace MultiPing {
     void Sonar::stop() {
         state = IDLE;
         // TODO remove from all Task lists
-        device.reset(trigger, echo);
+        device->reset(trigger, echo);
     }
 
     #if DEBUG
@@ -156,13 +148,13 @@ namespace MultiPing {
         echo.input();
         echo.pullup();
         state = States::WAIT_LAST_FINISHED;
-        enqueueShort( device.usecWaitEchoLowTimeout );
+        enqueueShort( device->usecWaitEchoLowTimeout );
         return true;
     }
 
     bool Sonar::triggerWaitLastFinished(unsigned long now) {
         if (echo.read()) {  // Previous ping hasn't finished, abort.
-            printf("Failed %8lu: %u\n", now, echo.read());
+            if (DEBUG) printf("Failed %8lu: %u\n", now, echo.read());
             if (handler) handler->error(this, STILL_PINGING);
             state = States::START_PING;
             recycle(now);
@@ -172,7 +164,7 @@ namespace MultiPing {
         trigger.low();
         trigger.high();  // Set trigger pin high, this tells the sensor to send out a ping.
         state = States::WAIT_TRIGGER_PULSE;
-        enqueueShort( device.usecTriggerPulseDuration );
+        enqueueShort( device->usecTriggerPulseDuration );
         return true;
     }
 
@@ -186,7 +178,7 @@ namespace MultiPing {
     #endif
         }
     #endif
-        timeout = micros() + device.usecMaxEchoDuration + device.usecMaxEchoStartDelay; 
+        timeout = micros() + device->usecMaxEchoDuration + device->usecMaxEchoStartDelay; 
                        // Maximum time we'll wait for ping to start
                                         // (most sensors are <450uS, the SRF06 can take
                                         // up to 34,300uS!)
@@ -201,14 +193,14 @@ namespace MultiPing {
                 if (DEBUG) printf("start failed: %8lu vs %8lu\n", now, timeout );
                 if (handler) handler->error(this, PING_FAILED_TO_START);
                 state = States::START_PING;
-                device.reset(trigger, echo);
+                device->reset(trigger, echo);
                 recycle(now);
                 return true;
             }
             return false;
         }
         echoStart = now;
-        timeout = now + device.usecMaxEchoDuration;
+        timeout = now + device->usecMaxEchoDuration;
         state = States::WAIT_ECHO;
         waitEvent();
         return true;
@@ -219,7 +211,7 @@ namespace MultiPing {
             if (lessThanUnsigned( timeout, now)) {  // Took too long to finish, abort.
                 if (DEBUG) printf("no echo %2d %8lu %8lu %8lu\n", getId(), now, timeout, unsignedDistance(now, echoStart) );
                 if (handler) handler->event(this, NO_PING);
-                device.reset(trigger, echo);
+                device->reset(trigger, echo);
                 state = States::START_PING;
                 recycle(now);
                 return true;
@@ -234,7 +226,7 @@ namespace MultiPing {
 
     int Units::iSoS = (0 + 30)/5;
     int Units::cT = 0;
-    Units::SoS_t Units::speedOfSound[nSoS] = {
+    const PROGMEM Units::SoS_t Units::speedOfSound[nSoS] = {
         {312,	512},
         {315,	709},
         {318,	873},
@@ -255,8 +247,8 @@ namespace MultiPing {
     };
 
     void Units::setTemperature( int dC ) {
-        dC = std::max(-30,dC);
-        dC = std::min(+50,dC);
+        dC = (-30 > dC) ? -30 : dC;
+        dC = (+50 < dC) ? +50 : dC;
         cT = dC;
         iSoS = (dC+30)/5;
     }

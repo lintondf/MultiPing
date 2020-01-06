@@ -28,26 +28,6 @@ namespace MultiPing {
 
 #include <GPIO.h>
 
-#if 0
-    inline int compareUnsigned( unsigned long a, unsigned long b ) {
-        unsigned long d0 = a - b;
-        //printf("d0 %8lu\n", d0);
-        if (d0 == 0ul)
-            return 0;
-        unsigned long d1 = b - a;
-        //printf("d1 %8lu\n", d1);
-        return (d0 < d1) ? +1 : -1;
-    }
-
-    inline unsigned long lessThanUnsigned( unsigned long a, unsigned long b ) {
-        return compareUnsigned( a, b ) == -1;
-    }
-
-    inline unsigned long unsignedDistance( unsigned long a, unsigned long b ) {
-        return std::min( a-b, b-a );
-    }
-#endif
-
     class Units {
         public:
             static inline unsigned long s2us( unsigned long ms) {
@@ -79,52 +59,6 @@ namespace MultiPing {
             static const PROGMEM SoS_t speedOfSound[nSoS];
             static int iSoS;
     };
-#if 0
-    class Task {
-        public:
-            Task(int id) : id(id) {}
-            virtual ~Task() {}
-            virtual int getId() {
-                return id;
-            }
-            virtual bool dispatch(unsigned long now);
-
-            static inline bool lessThan( Task* lhs, Task* rhs) {
-                //printf("lessThan %p %2d %8lu %8lu\n", lhs, lhs->getId(), lhs->whenEnqueued, lhs->usecDelay );
-                //printf("         %p %2d %8lu %8lu\n", rhs, rhs->getId(), rhs->whenEnqueued, rhs->usecDelay );
-                bool result = lessThanUnsigned( lhs->whenEnqueued+lhs->usecDelay, rhs->whenEnqueued+rhs->usecDelay );
-                //printf("         %s\n", (result) ? "T":"F");
-                return result;
-            }
-
-            static void run();
-            static void print(unsigned long now);
-            void enqueueShort(unsigned long usecDelay);
-            void enqueueLong(unsigned long usecDelay);
-            void waitEvent();
-
-        protected:
-            int id;
-            unsigned long whenEnqueued;  // usec (from micros())
-            unsigned long usecDelay;     // usec wait requested
-
-            static bool ready( unsigned long now, Task* task) {
-                return ! lessThanUnsigned( now, task->whenEnqueued + task->usecDelay );
-            }
-
-            // only valid is ! ready()
-            static unsigned int usecRemaining(unsigned long now, Task *task) {
-                unsigned long dt = (task->whenEnqueued + task->usecDelay) - now;
-                return (unsigned int)dt;
-            }
-
-            static unsigned long        cycleCount;
-            static std::list<Task*>     waiting;
-            static PriorityQueue<Task*> fastQueue;
-            static PriorityQueue<Task*> slowQueue;
-
-    };
-#endif
 
     class Device {
         public:
@@ -134,8 +68,8 @@ namespace MultiPing {
                 echo.output();
                 echo.low();
             }
-            unsigned int  usecWaitEchoLowTimeout = 4u;
-            unsigned int  usecTriggerPulseDuration = 16u;
+            unsigned int  usecWaitEchoLowTimeout = 10u;
+            unsigned int  usecTriggerPulseDuration = 24u;
             unsigned long usecMaxEchoStartDelay = 500u;
             unsigned long usecMaxEchoDuration = 50000ul;
         protected:
@@ -173,6 +107,8 @@ namespace MultiPing {
 
             bool start(unsigned long usStartDelay, unsigned long usCycleTime, Handler* handler );
             void stop();
+
+            void calibrate();
 
             bool dispatch(unsigned long now);
 

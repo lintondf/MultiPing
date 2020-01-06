@@ -19,6 +19,10 @@
 #include <avr/pgmspace.h>
 #endif
 
+#undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused with << or >> streaming operators
+#include <PrintEx.h>
+
+
 namespace MultiPing {
     class Task;
     class TaskList;
@@ -73,7 +77,8 @@ namespace MultiPing {
                     friend class TaskList;
             };
 
-            TaskList() : count(0), head(nullptr), tail(nullptr) {}
+            TaskList() : count(0), head(nullptr), tail(nullptr) {
+            }
 
             ~TaskList() {}
 
@@ -97,24 +102,35 @@ namespace MultiPing {
             Task* peek();
             Task* last();
             Task* pop();
+            bool contains(Task* task);
 
             Iterator insert( Iterator& before, Task* task);
             void push_back( Task* task);
             void push_front( Task* task);
             void push_priority( Task* task);
 
+            void erase( Task* which );
             Iterator erase( Iterator which);
 
+            // test support methods
+            bool check(const char* tag = nullptr);
+            void dump();
         protected:
             unsigned int count;
             Task* head;
             Task* tail;
     };
 
+
     class Task {
         public:
-            Task(int id) : id(id), next(nullptr), prev(nullptr) {
-                //!!Serial.print("Task("); Serial.print(id); Serial.println(")");
+            Task(int id) : id(id), next(nullptr), prev(nullptr), waiting(false) {
+                nextTask = all;  // link this Task to previously constructed head
+                all = this;      // new head
+                // Serial.print("Task("); Serial.print(id); Serial.print(") ");
+                // Serial.print( (unsigned long) all, HEX); Serial.print(" ");
+                // Serial.print( (unsigned long) this, HEX); Serial.print(" ");
+                // Serial.println( (unsigned long) nextTask, HEX);
             }
             virtual ~Task() {}
             virtual int getId() {
@@ -124,20 +140,25 @@ namespace MultiPing {
 
             void enqueueShort(unsigned long usecDelay);
             void enqueueLong(unsigned long usecDelay);
-            void waitEvent();
+            void waitEvent(bool waitEvent);
 
-            static TaskList getLongQueue() { return slowQueue; }
+            void dump( const char* tag);
+
+            static TaskList& getLongQueue() { return slowQueue; }
             static bool lessThan( Task* lhs, Task* rhs);
 
             static void run();
+            static void report(); 
             static void print(unsigned long now);
-
+            static void setDebugOutput( StreamEx* dbg ) { Task::dbg = dbg; }
         protected:
             int id;
             Task* next;
             Task* prev;
             friend class TaskList;
             friend class TaskList::Iterator;
+            Task* nextTask;      // simple linked list of all Task objects; based on static all below
+            bool          waiting;       // true if waiting for event
             unsigned long whenEnqueued;  // usec (from micros())
             unsigned long usecDelay;     // usec wait requested
 
@@ -151,8 +172,9 @@ namespace MultiPing {
                 return (unsigned int)dt;
             }
 
+            static StreamEx*            dbg;
             static unsigned long        cycleCount;
-            static TaskList             waiting;
+            static Task*                all;
             static TaskList             fastQueue;
             static TaskList             slowQueue;
     };

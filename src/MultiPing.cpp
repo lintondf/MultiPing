@@ -1,91 +1,14 @@
 #include <MultiPing.h>
 
 
-#define DEBUG 3 // 5288/505 vs 8038/694
-#if DEBUG
+#define DEBUG 0
+#undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused with << or >> streaming operators
+#include <PrintEx.h>
 #include <RunningStatistics.h>
-#endif
 
 
 namespace MultiPing {
 
-#if 0
-    std::list<Task*>     Task::waiting;
-    PriorityQueue<Task*> Task::fastQueue(Task::lessThan);
-    PriorityQueue<Task*> Task::slowQueue(Task::lessThan);
-
-    unsigned long        Task::cycleCount = 0ul;
-
-    void Task::print(unsigned long now) {
-#if DEBUG > 0
-        for (PriorityQueue<Task*>::iterator it = slowQueue.begin(); it != slowQueue.end(); it++) {
-            printf("%3d slowQueue %8lu %8lu (%8lu) %8lu %s\n", (*it)->getId(), now, (*it)->whenEnqueued, (now - (*it)->whenEnqueued), (*it)->usecDelay,
-                (ready(now, (*it)) ? "T" : "F") );        
-        }
-        for (PriorityQueue<Task*>::iterator it = fastQueue.begin(); it != fastQueue.end(); it++) {
-            printf("%3d fastQueue %8lu %8lu (%8lu) %8lu %s\n", (*it)->getId(), now, (*it)->whenEnqueued, (now - (*it)->whenEnqueued), (*it)->usecDelay,
-                (ready(now, (*it)) ? "T" : "F") );        
-        }
-#endif        
-    }
-
-    void Task::run() {
-        unsigned long now = micros();
-#if DEBUG > 0
-        if (cycleCount == 0L) {
-            print(now);
-        }
-#endif    
-        cycleCount++;
-        //if (DEBUG > 3) printf("run %8lu %8lu %u:%d/%d:%d/%d\n", now, cycleCount, waiting.size(), 
-        //    slowQueue.size(), slowQueue.isEmpty(), fastQueue.size(), fastQueue.isEmpty() );
-        if (!slowQueue.isEmpty()) {
-            // if the top is not ready neither is anyone else
-            if (ready(now, slowQueue.peek())) {
-                now = micros();
-                if (DEBUG >= 2) printf("slow %8lu/%8lu: %d:%d\n", now, cycleCount, slowQueue.size(), fastQueue.size() );
-                slowQueue.pop()->dispatch(now);
-            }
-        }
-        for (std::list<Task*>::iterator it = waiting.begin(); it != waiting.end(); ) {
-            if ((*it)->dispatch(now)) {
-                if (DEBUG >= 2) printf("wait %8lu/%8lu: %d\n", now, cycleCount, waiting.size());
-                it = waiting.erase(it);
-            } else {
-                it++;
-            }
-        }
-        now = micros();
-        // work off short delay events until exhausted
-        while (!fastQueue.isEmpty()) {
-            if (!ready(now, fastQueue.peek())) {
-                unsigned int dt = usecRemaining(now, fastQueue.peek());
-                delayMicroseconds(dt);
-            }
-            now = micros();
-            if (DEBUG > 2) printf("fast %8lu/%8lu: %d\n", now, cycleCount, fastQueue.size());
-            fastQueue.pop()->dispatch(now);
-        }
-    }
-
-
-    void Task::enqueueShort(unsigned long usecDelay) {
-        this->whenEnqueued = micros();
-        this->usecDelay = usecDelay;
-        fastQueue.push(this);
-    }
-
-    void Task::enqueueLong(unsigned long usecDelay) {
-        this->whenEnqueued = micros();
-        this->usecDelay = usecDelay;
-        //printf("enqueue %p %8lu %8lu\n", this, this->whenEnqueued, this->usecDelay );
-        slowQueue.push(this);
-    }
-
-    void Task::waitEvent() {
-        waiting.push_back(this);
-    }
-#endif
 
     Device Sonar::defaultDevice;
 
@@ -95,7 +18,8 @@ namespace MultiPing {
             t -= usCycleTime;
         usecDelay = usCycleTime - t;
         whenEnqueued = now;
-        if (DEBUG > 2) printf("recycle %8lu %8lu %8lu\n", micros(), whenEnqueued, usecDelay );
+        waitEvent(false);
+        if (DEBUG > 2) if (dbg) dbg->printf("%2d recycle %8lu %8lu %8lu\n", getId(), micros(), whenEnqueued, usecDelay );
         Task::getLongQueue().push_priority(this);
     }
 
@@ -108,7 +32,11 @@ namespace MultiPing {
 
     void Sonar::stop() {
         state = IDLE;
-        // TODO remove from all Task lists
+        waitEvent(false);
+        if (slowQueue.contains(this))
+            slowQueue.erase(this);
+        if (fastQueue.contains(this))
+            fastQueue.erase(this);
         device->reset(trigger, echo);
     }
 
@@ -125,7 +53,7 @@ namespace MultiPing {
 
     bool Sonar::dispatch(unsigned long now) {
     #if DEBUG
-        if (state != IDLE && DEBUG > 1) printf("%8lu dispatch %d: [%d] %s\n", now, getId(), (int)state, stateNames[(int)state] );
+        if (/*state != IDLE &&*/ DEBUG > 1) if (dbg) dbg->printf("%8lu dispatch %d: [%d] %s\n", now, getId(), (int)state, stateNames[(int)state] );
     #endif
         switch (state) {
             case IDLE:  // first cycle only
@@ -154,7 +82,7 @@ namespace MultiPing {
 
     bool Sonar::triggerWaitLastFinished(unsigned long now) {
         if (echo.read()) {  // Previous ping hasn't finished, abort.
-            if (DEBUG) printf("Failed %8lu: %u\n", now, echo.read());
+            if (DEBUG) if (dbg) dbg->printf("Failed %8lu: %u\n", now, echo.read());
             if (handler) handler->error(this, STILL_PINGING);
             state = States::START_PING;
             recycle(now);
@@ -183,14 +111,15 @@ namespace MultiPing {
                                         // (most sensors are <450uS, the SRF06 can take
                                         // up to 34,300uS!)
         state = States::WAIT_ECHO_STARTED;
-        waitEvent();
+        waitEvent(true);
+        //if (DEBUG) if (dbg) dbg->printf("waiting trigger %d\n", getId() );
         return true;
     }
 
     bool Sonar::triggerWaitEchoStarted(unsigned long now) {
         if (!echo.read()) {              // Wait for ping to start.
-            if (lessThanUnsigned( timeout, now)) {  // Took too long to start, abort.
-                if (DEBUG) printf("start failed: %8lu vs %8lu\n", now, timeout );
+            if (lessThanUnsigned( timeout, now)) {  // Took too long to start, abort.              
+                if (DEBUG) if (dbg) dbg->printf("start failed: %8lu vs %8lu\n", now, timeout );
                 if (handler) handler->error(this, PING_FAILED_TO_START);
                 state = States::START_PING;
                 device->reset(trigger, echo);
@@ -198,18 +127,21 @@ namespace MultiPing {
                 return true;
             }
             return false;
-        }
+        }       
+        now = micros();
         echoStart = now;
         timeout = now + device->usecMaxEchoDuration;
+        if (DEBUG) if (dbg) dbg->printf("echo start %2d %8lu %8lu\n", getId(), now, timeout );
         state = States::WAIT_ECHO;
-        waitEvent();
+        waitEvent(true);
         return true;
     }
 
     bool Sonar::waitEchoComplete(unsigned long now) {
-        if (echo.read()) {              // Wait for ping to fished
+        now = micros();
+        if (echo.read()) {              // Wait for ping to finished
             if (lessThanUnsigned( timeout, now)) {  // Took too long to finish, abort.
-                if (DEBUG) printf("no echo %2d %8lu %8lu %8lu\n", getId(), now, timeout, unsignedDistance(now, echoStart) );
+                if (DEBUG) if (dbg) dbg->printf("no return %2d %8lu %8lu %8lu\n", getId(), now, timeout, unsignedDistance(now, echoStart) );
                 if (handler) handler->event(this, NO_PING);
                 device->reset(trigger, echo);
                 state = States::START_PING;
@@ -218,10 +150,36 @@ namespace MultiPing {
             }
             return false;
         }
+        if (DEBUG) if (dbg) dbg->printf("echo rx %2d %8lu %8lu %8lu\n", getId(), now, timeout, unsignedDistance(now, echoStart) );
         if (handler) handler->event(this, unsignedDistance(now, echoStart)/2 );
         state = States::START_PING;
         recycle(now);
         return true;
+    }
+
+    void Sonar::calibrate() {
+        RunningStatistics stats, stat2;
+        for (int i = 0; i < 100; i++) {
+            trigger.output();
+            trigger.low();
+            //TODO single pin support
+            echo.input();
+            echo.pullup();
+            while (echo.read()) ;
+            trigger.pulse(24);
+            unsigned long waitStart = micros();
+            while (! echo.read()) ;
+            unsigned long echoStart = micros();
+            while (echo.read()) ;
+            unsigned long echoFinish = micros();
+            stats.push(unsignedDistance(echoStart, waitStart));
+            stat2.push(unsignedDistance(waitStart, echoFinish));
+            delay(50);
+        }
+        if (dbg) dbg->printf("%2d Trigger TE to Echo LE (us, mean, var, min, max): %10.0f %10.0f %10.0f %10.0f\n", getId(),
+            stats.mean(), stats.variance(), stats.minimum(), stats.maximum() );
+        if (dbg) dbg->printf("%2d Echo LE to Echo TE (us, mean, var, min, max):    %10.0f %10.0f %10.0f %10.0f\n", getId(),
+            stat2.mean(), stat2.variance(), stat2.minimum(), stat2.maximum() );
     }
 
     int Units::iSoS = (0 + 30)/5;

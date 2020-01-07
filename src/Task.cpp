@@ -1,8 +1,12 @@
 #include <Task.h>
 
+
 #define DEBUG 0
 #if DEBUG
 #include <RunningStatistics.h>
+#undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
+                                   // with << or >> streaming operators
+#include <PrintEx.h>
 #endif
 
 using namespace MultiPing;
@@ -285,6 +289,7 @@ StreamEx* Task::dbg;
 unsigned long Task::cycleCount = 0ul;
 
 void Task::report() {
+#if DEBUG > 0
     Task::dbg->printf("Tasks: ");
     Task* task = all;
     while (task != nullptr) {
@@ -294,15 +299,18 @@ void Task::report() {
     Task::dbg->printf("\n");
     Task::dbg->printf("fast %lx; slow %lx\n", (unsigned long)&fastQueue,
                       (unsigned long)&slowQueue);
+#endif                    
 }
 
 void Task::dump(const char* tag) {
+#if DEBUG > 0
     if (Task::dbg) {
         Task::dbg->printf("%s  %8lx/%2d: p %8lx n %8lx; %8lu %8lu\n", tag,
                           (unsigned long)this, this->getId(),
                           (unsigned long)this->prev, (unsigned long)this->next,
                           this->whenEnqueued, this->usecDelay);
     }
+#endif    
 }
 
 void Task::print(unsigned long now) {
@@ -334,20 +342,23 @@ void Task::run() {
     }
 #endif
     cycleCount++;
-    if (DEBUG >= 3 && (slowQueue.size() > 0 || fastQueue.size() > 0))
+#if DEBUG >= 3    
+    if ((slowQueue.size() > 0 || fastQueue.size() > 0))
         if (dbg)
             dbg->printf("run %8lu %8lu %u:%d/%u:%d\n", now, cycleCount,
                         slowQueue.size(), slowQueue.isEmpty(), fastQueue.size(),
                         fastQueue.isEmpty());
+#endif                    
     if (!slowQueue.isEmpty()) {
         // if the top is not ready neither is anyone else
         if (ready(now, slowQueue.peek())) {
             now = micros();
             Task* task = slowQueue.pop();
-            if (DEBUG >= 2)
-                if (dbg)
-                    dbg->printf("slow %8lu/%8lu: %d\n", now, cycleCount,
-                                task->getId());
+#if DEBUG >= 2
+            if (dbg)
+                dbg->printf("slow %8lu/%8lu: %d\n", now, cycleCount,
+                            task->getId());
+#endif                                
             task->dispatch(now);
         }
     }
@@ -360,10 +371,11 @@ void Task::run() {
         }
         now = micros();
         Task* task = fastQueue.pop();
-        if (DEBUG >= 2)
+#if DEBUG >= 2
             if (dbg)
                 dbg->printf("fast %8lu/%8lu: %d\n", now, cycleCount,
                             task->getId());
+#endif                            
         task->dispatch(now);
     }
 
@@ -372,10 +384,11 @@ void Task::run() {
     while (task != nullptr) {
         if (task->waiting) {
             now = micros();
-            if (DEBUG >= 2)
+#if DEBUG >= 2
                 if (dbg)
                     dbg->printf("wait %8lu/%8lu: %d\n", now, cycleCount,
                                 task->getId());
+#endif                                
             task->dispatch(now);
         }
         task = task->nextTask;

@@ -1,6 +1,8 @@
 #ifndef _MULTIPING_TASK_H
 #define _MULTIPING_TASK_H 1
 
+#define _MULTIPING_DEBUG_ 0
+
 #if defined(ARDUINO) && ARDUINO >= 100
 #include <Arduino.h>
 #else
@@ -18,9 +20,13 @@
 #include <avr/pgmspace.h>
 #endif
 
-#undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
-                                   // with << or >> streaming operators
+#if _MULTIPING_DEBUG_
+#undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused with << or >> streaming operators
 #include <PrintEx.h>
+static StreamEx out(Serial);
+#else
+class StreamEx;
+#endif
 
 namespace MultiPing {
 class Task;
@@ -138,6 +144,7 @@ class Task {
     static void report();
     static void print(unsigned long now);
     static void setDebugOutput(StreamEx* dbg) { Task::dbg = dbg; }
+    static StreamEx* dbg;
 
    protected:
     int id;
@@ -161,7 +168,6 @@ class Task {
         return (unsigned int)dt;
     }
 
-    static StreamEx* dbg;
     static unsigned long cycleCount;
     static Task* all;
     static TaskList fastQueue;

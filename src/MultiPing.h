@@ -19,7 +19,7 @@
 #if defined(__AVR__)
 #include <avr/interrupt.h>
 #include <avr/io.h>
-#include <avr/pgmspace.h>
+//#include <avr/pgmspace.h>
 #endif
 
 #include <Task.h>
@@ -55,7 +55,7 @@ class Units {
         int mms;
     } SoS_t;  // m/s, remainder mm/s
     // indexed by T(C)/5; T in range -30 to 50
-    static const PROGMEM SoS_t speedOfSound[nSoS];
+    static const SoS_t speedOfSound[nSoS];
     static int iSoS;
 };
 
@@ -70,7 +70,7 @@ class Device {
     unsigned int usecWaitEchoLowTimeout = 10u;
     unsigned int usecTriggerPulseDuration = 24u;
     unsigned long usecMaxEchoStartDelay = 500u;
-    unsigned long usecMaxEchoDuration = 50000ul;
+    unsigned long usecMaxEchoDuration = 60000ul;
 
    protected:
 };
@@ -104,6 +104,7 @@ class Sonar : public Task {
         NO_PING = 0L,
         STILL_PINGING = -1L,
         PING_FAILED_TO_START = -2L,
+        N_ERRORS = 3  
     };
 
     bool start(unsigned long usStartDelay, unsigned long usCycleTime,

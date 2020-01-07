@@ -1,10 +1,12 @@
 #include <MultiPing.h>
 
-#define DEBUG 0
+#if _MULTIPING_DEBUG_
 #undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
                                    // with << or >> streaming operators
 #include <PrintEx.h>
 #include <RunningStatistics.h>
+#endif 
+
 
 namespace MultiPing {
 
@@ -16,10 +18,11 @@ void Sonar::recycle(unsigned long now) {
     usecDelay = usCycleTime - t;
     whenEnqueued = now;
     waitEvent(false);
-    if (DEBUG > 2)
+#if _MULTIPING_DEBUG_ > 2
         if (dbg)
             dbg->printf("%2d recycle %8lu %8lu %8lu\n", getId(), micros(),
                         whenEnqueued, usecDelay);
+#endif                        
     Task::getLongQueue().push_priority(this);
 }
 
@@ -39,7 +42,7 @@ void Sonar::stop() {
     device->reset(trigger, echo);
 }
 
-#if DEBUG
+#if _MULTIPING_DEBUG_
 static const char* stateNames[] = {
     "IDLE",
     "START_PING",          // runs triggerStartPing()
@@ -51,8 +54,8 @@ static const char* stateNames[] = {
 #endif
 
 bool Sonar::dispatch(unsigned long now) {
-#if DEBUG
-    if (/*state != IDLE &&*/ DEBUG > 1)
+#if _MULTIPING_DEBUG_
+    if (state != IDLE)
         if (dbg)
             dbg->printf("%8lu dispatch %d: [%d] %s\n", now, getId(), (int)state,
                         stateNames[(int)state]);
@@ -84,8 +87,9 @@ bool Sonar::triggerStartPing(unsigned long now) {
 
 bool Sonar::triggerWaitLastFinished(unsigned long now) {
     if (echo.read()) {  // Previous ping hasn't finished, abort.
-        if (DEBUG)
+#if _MULTIPING_DEBUG_
             if (dbg) dbg->printf("Failed %8lu: %u\n", now, echo.read());
+#endif            
         if (handler) handler->error(this, STILL_PINGING);
         state = States::START_PING;
         recycle(now);
@@ -117,16 +121,19 @@ bool Sonar::triggerWaitTriggerPulse(unsigned long now) {
     // up to 34,300uS!)
     state = States::WAIT_ECHO_STARTED;
     waitEvent(true);
-    // if (DEBUG) if (dbg) dbg->printf("waiting trigger %d\n", getId() );
+#if _MULTIPING_DEBUG_
+    if (dbg) dbg->printf("waiting trigger %d\n", getId() );
+#endif    
     return true;
 }
 
 bool Sonar::triggerWaitEchoStarted(unsigned long now) {
     if (!echo.read()) {                        // Wait for ping to start.
         if (lessThanUnsigned(timeout, now)) {  // Took too long to start, abort.
-            if (DEBUG)
+#if _MULTIPING_DEBUG_
                 if (dbg)
                     dbg->printf("start failed: %8lu vs %8lu\n", now, timeout);
+#endif                    
             if (handler) handler->error(this, PING_FAILED_TO_START);
             state = States::START_PING;
             device->reset(trigger, echo);
@@ -138,9 +145,10 @@ bool Sonar::triggerWaitEchoStarted(unsigned long now) {
     now = micros();
     echoStart = now;
     timeout = now + device->usecMaxEchoDuration;
-    if (DEBUG)
+#if _MULTIPING_DEBUG_
         if (dbg)
             dbg->printf("echo start %2d %8lu %8lu\n", getId(), now, timeout);
+#endif            
     state = States::WAIT_ECHO;
     waitEvent(true);
     return true;
@@ -151,10 +159,11 @@ bool Sonar::waitEchoComplete(unsigned long now) {
     if (echo.read()) {  // Wait for ping to finished
         if (lessThanUnsigned(timeout,
                              now)) {  // Took too long to finish, abort.
-            if (DEBUG)
+#if _MULTIPING_DEBUG_
                 if (dbg)
                     dbg->printf("no return %2d %8lu %8lu %8lu\n", getId(), now,
                                 timeout, unsignedDistance(now, echoStart));
+#endif                                
             if (handler) handler->event(this, NO_PING);
             device->reset(trigger, echo);
             state = States::START_PING;
@@ -163,10 +172,11 @@ bool Sonar::waitEchoComplete(unsigned long now) {
         }
         return false;
     }
-    if (DEBUG)
+#if _MULTIPING_DEBUG_
         if (dbg)
             dbg->printf("echo rx %2d %8lu %8lu %8lu\n", getId(), now, timeout,
                         unsignedDistance(now, echoStart));
+#endif                        
     if (handler) handler->event(this, unsignedDistance(now, echoStart) / 2);
     state = States::START_PING;
     recycle(now);
@@ -174,6 +184,7 @@ bool Sonar::waitEchoComplete(unsigned long now) {
 }
 
 void Sonar::calibrate() {
+#if _MULTIPING_DEBUG_
     RunningStatistics stats, stat2;
     for (int i = 0; i < 100; i++) {
         trigger.output();
@@ -207,11 +218,12 @@ void Sonar::calibrate() {
             "%10.0f %10.0f %10.0f\n",
             getId(), stat2.mean(), stat2.variance(), stat2.minimum(),
             stat2.maximum());
+#endif            
 }
 
 int Units::iSoS = (0 + 30) / 5;
 int Units::cT = 0;
-const PROGMEM Units::SoS_t Units::speedOfSound[nSoS] = {
+const Units::SoS_t Units::speedOfSound[nSoS] = {
     {312, 512}, {315, 709}, {318, 873}, {322, 7},   {325, 110}, {328, 185},
     {331, 230}, {334, 248}, {337, 239}, {340, 203}, {343, 142}, {346, 56},
     {348, 946}, {351, 812}, {354, 655}, {357, 475}, {360, 273}};

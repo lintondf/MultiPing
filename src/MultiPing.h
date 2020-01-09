@@ -31,32 +31,14 @@
 #endif
 
 #include <MultiPingUnits.h>
-#include <Task.h>
+#include <Task.h> //TODO  ->MultiPingTask
+#include <MultiPingDevice.h>
 
 namespace MultiPing {
 
 #include <IGPIO.h>
 
-class Device {
-   public:
-    Device() {}
-    virtual void reset(const IGPIO& trigger, const IGPIO& echo) {
-        trigger.low();
-        echo.output();
-        echo.low();
-    }
-    unsigned int usecWaitEchoLowTimeout = 10u;
-    unsigned int usecTriggerPulseDuration = 24u;
-    unsigned long usecMaxEchoStartDelay = 500u;
-    unsigned long usecMaxEchoDuration = 60000ul;
-
-   protected:
-};
-
 class Sonar : public Task {
-   private:
-    static Device defaultDevice;
-
    public:
     class Handler {
        public:
@@ -67,7 +49,7 @@ class Sonar : public Task {
             event(task, errorCode);  // default is to handle errors as events
         }
     };
-    Sonar(int id, const IGPIO& trigger, const IGPIO& echo, Device* device = &defaultDevice)
+    Sonar(int id, const IGPIO& trigger, const IGPIO& echo, Device* device = new Device())
         : Task(id),
           device(device),
           trigger(trigger),

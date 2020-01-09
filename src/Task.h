@@ -3,6 +3,9 @@
 
 #define _MULTIPING_DEBUG_ 0
 
+/*
+ * Attribution: https://learn.adafruit.com/memories-of-an-arduino/measuring-free-memory; 
+ */
 #if defined(ARDUINO) && ARDUINO >= 100
 #include <Arduino.h>
 #else

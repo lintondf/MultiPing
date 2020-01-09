@@ -1,8 +1,7 @@
 #include <Task.h>
 
 
-#define DEBUG 0
-#if DEBUG
+#if _MULTIPING_DEBUG_
 #include <RunningStatistics.h>
 #undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
                                    // with << or >> streaming operators
@@ -49,7 +48,7 @@ bool TaskList::contains(Task* task) {
     Task* x = head;
     while (x != nullptr) {
         if (x == task) {
-#if DEBUG
+#if _MULTIPING_DEBUG_
             if (Task::dbg)
                 Task::dbg->printf("%lx already in %lx\n", (unsigned long)task,
                                   (unsigned long)this);
@@ -63,7 +62,7 @@ bool TaskList::contains(Task* task) {
 }
 
 bool TaskList::check(const char* tag) {
-#if DEBUG  // test support function; TODO move to test mock
+#if _MULTIPING_DEBUG_  // test support function; TODO move to test mock
     unsigned int bad = 0;
     if (count == 0) {
         if (head != nullptr)
@@ -134,7 +133,7 @@ bool TaskList::check(const char* tag) {
 }
 
 void TaskList::dump() {
-#if DEBUG
+#if _MULTIPING_DEBUG_
     if (Task::dbg) {
         Task::dbg->printf("TaskList %d h %8lx t %8lx\n", count,
                           (unsigned long)head, (unsigned long)tail);
@@ -289,7 +288,7 @@ StreamEx* Task::dbg;
 unsigned long Task::cycleCount = 0ul;
 
 void Task::report() {
-#if DEBUG > 0
+#if _MULTIPING_DEBUG_ > 0
     Task::dbg->printf("Tasks: ");
     Task* task = all;
     while (task != nullptr) {
@@ -303,7 +302,7 @@ void Task::report() {
 }
 
 void Task::dump(const char* tag) {
-#if DEBUG > 0
+#if _MULTIPING_DEBUG_ > 0
     if (Task::dbg) {
         Task::dbg->printf("%s  %8lx/%2d: p %8lx n %8lx; %8lu %8lu\n", tag,
                           (unsigned long)this, this->getId(),
@@ -314,7 +313,7 @@ void Task::dump(const char* tag) {
 }
 
 void Task::print(unsigned long now) {
-#if DEBUG > 0
+#if _MULTIPING_DEBUG_ > 0
     for (TaskList::Iterator it = slowQueue.begin(); it != slowQueue.end();
          it++) {
         if (dbg)
@@ -336,13 +335,13 @@ void Task::print(unsigned long now) {
 
 void Task::run() {
     unsigned long now = micros();
-#if DEBUG > 0
+#if _MULTIPING_DEBUG_ > 0
     if (cycleCount == 0L) {
         print(now);
     }
 #endif
     cycleCount++;
-#if DEBUG >= 3    
+#if _MULTIPING_DEBUG_ >= 3    
     if ((slowQueue.size() > 0 || fastQueue.size() > 0))
         if (dbg)
             dbg->printf("run %8lu %8lu %u:%d/%u:%d\n", now, cycleCount,
@@ -354,7 +353,7 @@ void Task::run() {
         if (ready(now, slowQueue.peek())) {
             now = micros();
             Task* task = slowQueue.pop();
-#if DEBUG >= 2
+#if _MULTIPING_DEBUG_ >= 2
             if (dbg)
                 dbg->printf("slow %8lu/%8lu: %d\n", now, cycleCount,
                             task->getId());
@@ -371,7 +370,7 @@ void Task::run() {
         }
         now = micros();
         Task* task = fastQueue.pop();
-#if DEBUG >= 2
+#if _MULTIPING_DEBUG_ >= 2
             if (dbg)
                 dbg->printf("fast %8lu/%8lu: %d\n", now, cycleCount,
                             task->getId());
@@ -384,7 +383,7 @@ void Task::run() {
     while (task != nullptr) {
         if (task->waiting) {
             now = micros();
-#if DEBUG >= 2
+#if _MULTIPING_DEBUG_ >= 2
                 if (dbg)
                     dbg->printf("wait %8lu/%8lu: %d\n", now, cycleCount,
                                 task->getId());

@@ -10,8 +10,6 @@
 
 namespace MultiPing {
 
-Device Sonar::defaultDevice;
-
 void Sonar::recycle(unsigned long now) {
     unsigned long t = unsignedDistance(now, cycleStart);
     while (t > usCycleTime) t -= usCycleTime;

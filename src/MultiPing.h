@@ -1,5 +1,13 @@
 #ifndef MULTIPING_H
 #define MULTIPING_H 1
+/***
+ * PolynomialFiltering.components.ICore
+ * (C) Copyright 2019 - Blue Lightning Development, LLC.
+ * D. F. Linton. support@BlueLightningDevelopment.com
+ *
+ * SPDX-License-Identifier: MIT
+ * See separate LICENSE file for full text
+ */
 
 /*********************************************************************
  * A library for handling multiple ultrasonic sensors via multitasking
@@ -26,38 +34,8 @@
 
 namespace MultiPing {
 
-#include <GPIO.h>
-
-class Units {
-   public:
-    static inline unsigned long s2us(unsigned long ms) {
-        return ms * 1000000ul;
-    }
-    static inline unsigned long ms2us(unsigned long ms) { return ms * 1000ul; }
-
-    static void setTemperature(int dC);
-
-    static inline unsigned long us2mm(unsigned long us) {
-        return (((unsigned long)speedOfSound[iSoS].ms) * us) / 1000L +
-               (((unsigned long)speedOfSound[iSoS].mms) * (us / 1000L)) / 1000L;
-    }
-
-    static float us2m(unsigned long us);
-    static float us2cm(unsigned long us);
-    static float us2ft(unsigned long us);
-    static float us2in(unsigned long us);
-
-   protected:
-    static int cT;  // C temperature
-    static const int nSoS = 17;
-    typedef struct {
-        int ms;
-        int mms;
-    } SoS_t;  // m/s, remainder mm/s
-    // indexed by T(C)/5; T in range -30 to 50
-    static const SoS_t speedOfSound[nSoS];
-    static int iSoS;
-};
+#include <IGPIO.h>
+#include <MultiPingUnits.h>
 
 class Device {
    public:
@@ -104,7 +82,7 @@ class Sonar : public Task {
         NO_PING = 0L,
         STILL_PINGING = -1L,
         PING_FAILED_TO_START = -2L,
-        N_ERRORS = 3  
+        N_ERRORS = 3
     };
 
     bool start(unsigned long usStartDelay, unsigned long usCycleTime,

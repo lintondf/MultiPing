@@ -160,7 +160,7 @@ bool Sonar::waitEchoComplete(unsigned long now) {
             dbg->printf("echo rx %2d %8lu %8lu %8lu\n", getId(), now, timeout,
                         unsignedDistance(now, echoStart));
 #endif                        
-    if (handler) handler->event(this, unsignedDistance(now, echoStart) / 2);
+    if (handler) handler->event(this, unsignedDistance(now, echoStart) / 2); // report one-way time
     state = States::START_PING;
     recycle(now);
     return true;

@@ -49,11 +49,9 @@ class Sonar : public Task {
             event(task, errorCode);  // default is to handle errors as events
         }
     };
-    Sonar(int id, const IGPIO& trigger, const IGPIO& echo, Device* device = new Device())
+    Sonar(int id, Device* device)
         : Task(id),
           device(device),
-          trigger(trigger),
-          echo(echo),
           handler(nullptr),
           state(IDLE){
 
@@ -78,8 +76,6 @@ class Sonar : public Task {
     const Device* device;
 
    protected:
-    const IGPIO& trigger;
-    const IGPIO& echo;
     Handler* handler;
     unsigned long timeout;      // usec maximum wait for event
     unsigned long echoStart;    // micros() at start of echo

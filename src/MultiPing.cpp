@@ -76,15 +76,14 @@ bool Sonar::dispatch(unsigned long now) {
 }
 
 bool Sonar::triggerStartPing(unsigned long now) {
-    echo.input();
-    echo.pullup();
+    device->begin();
     state = States::WAIT_LAST_FINISHED;
     enqueueShort(device->usecWaitEchoLowTimeout);
     return true;
 }
 
 bool Sonar::triggerWaitLastFinished(unsigned long now) {
-    if (echo.read()) {  // Previous ping hasn't finished, abort.
+    if (device->isEchoing()) {  // Previous ping hasn't finished, abort.
 #if _MULTIPING_DEBUG_
             if (dbg) dbg->printf("Failed %8lu: %u\n", now, echo.read());
 #endif            
@@ -93,30 +92,16 @@ bool Sonar::triggerWaitLastFinished(unsigned long now) {
         recycle(now);
         return true;
     }
-    trigger.output();
-    trigger.low();
-    trigger.high();  // Set trigger pin high, this tells the sensor to send out
-                     // a ping.
+    device->beginTrigger();
     state = States::WAIT_TRIGGER_PULSE;
     enqueueShort(device->usecTriggerPulseDuration);
     return true;
 }
 
 bool Sonar::triggerWaitTriggerPulse(unsigned long now) {
-    trigger.low();
-#if ONE_PIN_ENABLED == true
-    if (trigger.getPin() == echo.getPin()) {
-        echo.input();
-#if INPUT_PULLUP == true
-        echo.pullup();
-#endif
-    }
-#endif
-    timeout =
-        micros() + device->usecMaxEchoDuration + device->usecMaxEchoStartDelay;
+    device->finishTrigger();
+    timeout = micros() + device->usecMaxEchoDuration + device->usecMaxEchoStartDelay;
     // Maximum time we'll wait for ping to start
-    // (most sensors are <450uS, the SRF06 can take
-    // up to 34,300uS!)
     state = States::WAIT_ECHO_STARTED;
     waitEvent(true);
 #if _MULTIPING_DEBUG_
@@ -126,7 +111,7 @@ bool Sonar::triggerWaitTriggerPulse(unsigned long now) {
 }
 
 bool Sonar::triggerWaitEchoStarted(unsigned long now) {
-    if (!echo.read()) {                        // Wait for ping to start.
+    if (!device->isEchoing()) {                        // Wait for ping to start.
         if (lessThanUnsigned(timeout, now)) {  // Took too long to start, abort.
 #if _MULTIPING_DEBUG_
                 if (dbg)
@@ -154,7 +139,7 @@ bool Sonar::triggerWaitEchoStarted(unsigned long now) {
 
 bool Sonar::waitEchoComplete(unsigned long now) {
     now = micros();
-    if (echo.read()) {  // Wait for ping to finished
+    if (device->isEchoing()) {  // Wait for ping to finished
         if (lessThanUnsigned(timeout,
                              now)) {  // Took too long to finish, abort.
 #if _MULTIPING_DEBUG_

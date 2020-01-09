@@ -37,7 +37,7 @@ void Sonar::stop() {
     waitEvent(false);
     if (slowQueue.contains(this)) slowQueue.erase(this);
     if (fastQueue.contains(this)) fastQueue.erase(this);
-    device->reset(trigger, echo);
+    device->reset();
 }
 
 #if _MULTIPING_DEBUG_
@@ -134,7 +134,7 @@ bool Sonar::triggerWaitEchoStarted(unsigned long now) {
 #endif                    
             if (handler) handler->error(this, PING_FAILED_TO_START);
             state = States::START_PING;
-            device->reset(trigger, echo);
+            device->reset();
             recycle(now);
             return true;
         }
@@ -163,7 +163,7 @@ bool Sonar::waitEchoComplete(unsigned long now) {
                                 timeout, unsignedDistance(now, echoStart));
 #endif                                
             if (handler) handler->event(this, NO_PING);
-            device->reset(trigger, echo);
+            device->reset();
             state = States::START_PING;
             recycle(now);
             return true;

@@ -30,17 +30,17 @@
 //#include <avr/pgmspace.h>
 #endif
 
+#include <MultiPingUnits.h>
 #include <Task.h>
 
 namespace MultiPing {
 
 #include <IGPIO.h>
-#include <MultiPingUnits.h>
 
 class Device {
    public:
     Device() {}
-    virtual void reset(IGPIO& trigger, IGPIO& echo) {
+    virtual void reset(const IGPIO& trigger, const IGPIO& echo) {
         trigger.low();
         echo.output();
         echo.low();
@@ -67,7 +67,7 @@ class Sonar : public Task {
             event(task, errorCode);  // default is to handle errors as events
         }
     };
-    Sonar(int id, IGPIO& trigger, IGPIO& echo, Device* device = &defaultDevice)
+    Sonar(int id, const IGPIO& trigger, const IGPIO& echo, Device* device = &defaultDevice)
         : Task(id),
           device(device),
           trigger(trigger),
@@ -96,8 +96,8 @@ class Sonar : public Task {
     const Device* device;
 
    protected:
-    IGPIO& trigger;
-    IGPIO& echo;
+    const IGPIO& trigger;
+    const IGPIO& echo;
     Handler* handler;
     unsigned long timeout;      // usec maximum wait for event
     unsigned long echoStart;    // micros() at start of echo

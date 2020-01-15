@@ -1,52 +1,149 @@
 #include <MultiPing.h>
 #undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
-                                   // with << or >> streaming operators
+// with << or >> streaming operators
 #include <PrintEx.h>
 #include <RunningStatistics.h>
 
 StreamEx out(Serial);
 
-void calibrate( MultiPing::Device* device) {
-    RunningStatistics stats, stat2;
-    for (int i = 0; i < 100; i++) {
-      device->begin();
-      while (device->isEchoing())
-          ;
-      
-      device->beginTrigger();
-      delayMicroseconds(24);
-      device->finishTrigger();
-      unsigned long waitStart = micros();
-      while (!device->isEchoing())
-          ;
-      unsigned long echoStart = micros();
-      while (device->isEchoing())
-          ;
-      unsigned long echoFinish = micros();
-      stats.push(MultiPing::unsignedDistance(echoStart, waitStart));
-      stat2.push(MultiPing::unsignedDistance(waitStart, echoFinish));
-      delay(50);
+#define MULTIPING_TRACE true
+#include <MultiPingTrace.h>
+
+void calibrate( MultiPing::Device* device, float a) {
+  Serial.print("Trigger: "); Serial.println( device->getTriggerPin() );
+  Serial.print("Echo:    "); Serial.println( device->getEchoPin() );
+  out.printf("Averaging %d samples...\n", 100 );
+  RunningStatistics stats, stat2;
+  int notIdle = 0;
+  for (int i = 0; i < 100; i++) {
+    //      TRACE_TIMESTAMP(0,__LINE__);
+    unsigned long start = micros();
+    device->begin();
+    while (device->isEchoing())
+      notIdle++;
+    if ((micros() - start) > 1000000ul) {
+      out.println("Device stuck echoing");
+      device->reset();
+      return;
     }
-    out.printf(
-            "Trigger TE to Echo LE (us, mean, var, min, max): %10.0f "
-            "%10.0f %10.0f %10.0f\n",
-            stats.mean(), stats.variance(), stats.minimum(),
-            stats.maximum());
-    out.printf(
-            "Echo LE to Echo TE (us, mean, var, min, max):    %10.0f "
-            "%10.0f %10.0f %10.0f\n",
-            stat2.mean(), stat2.variance(), stat2.minimum(),
-            stat2.maximum());      
+
+    device->beginTrigger();
+    delayMicroseconds(24);
+    device->finishTrigger();
+    unsigned long waitStart = micros();
+    while (!device->isEchoing())
+      if ((micros() - start) > 1000000ul) {
+        out.println("Device never started echoing");
+        device->reset();
+        return;
+      }
+    unsigned long echoStart = micros();
+    while (device->isEchoing())
+      if ((micros() - start) > 1000000ul) {
+        out.println("Device echo never ended");
+        device->reset();
+        return;
+      }
+    unsigned long echoFinish = micros();
+    stats.push(MultiPing::unsignedDistance(echoStart, waitStart));
+    stat2.push(MultiPing::unsignedDistance(waitStart, echoFinish));
+    delay(50);
+  }
+  out.printf(
+    "Trigger TE to Echo LE [us] (mean, min, max): %10.0f "
+    "%10.0f %10.0f\n",
+    stats.mean(), stats.minimum(),
+    stats.maximum());
+  out.printf(
+    "Echo LE to Echo TE [us] (mean, min, max):    %10.0f "
+    "%10.0f %10.0f\n",
+    stat2.mean(), stat2.minimum(),
+    stat2.maximum());
+  out.printf(
+    "                   [in] (mean, min, max):    %10.2f "
+    "%10.2f %10.2f\n",
+    0.5*a*stat2.mean(), 0.5*a*stat2.minimum(),
+    0.5*a*stat2.maximum());
 }
 
-MultiPing::Device*  device;
+MultiPing::Device*  devices[6];
+
+float a; // speed of sound [inches/microsecond]
+
+template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
+using BaseTwoPinPullup = MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, TPIN, EPIN>;
+
+const BOARD::pin_t  R0T = BOARD::D54; //
+const BOARD::pin_t  R0E = BOARD::D55; //
+const BOARD::pin_t  R1T = BOARD::D56; // A2
+const BOARD::pin_t  R1E = BOARD::D57; //
+const BOARD::pin_t  R2T = BOARD::D58; // A4
+const BOARD::pin_t  R2E = BOARD::D59;
+const BOARD::pin_t  L0T = BOARD::D22; //
+const BOARD::pin_t  L0E = BOARD::D23; //
+const BOARD::pin_t  L1T = BOARD::D24;
+const BOARD::pin_t  L1E = BOARD::D25;
+const BOARD::pin_t  L2T = BOARD::D26;
+const BOARD::pin_t  L2E = BOARD::D27;
 
 void setup() {
   Serial.begin(115200);
-  while(!Serial) ;
-  device = new MultiPing::Default2PinDevice<BOARD::D14, BOARD::D15>();
+  while (!Serial) ;
+  Serial.println("Sensor Calibration");
+  MultiPing::Units::setTemperature( (int) 5.0 / 9.5 * (71.0 - 32.0) );
+  a = MultiPing::Units::us2in(1ul);
+  Serial.print( a ); Serial.println( " in/us" );
+
+  //  device = new BaseTwoPinPullup<BOARD::D22, BOARD::D23>(); //TODO FAILS
+  // device = new MultiPing::Default2PinDevice<BOARD::D54, BOARD::D55>();
+  //  device = new MultiPing::Default2PinDevice<BOARD::D56, BOARD::D57>();  // N/C
+  devices[0] = new MultiPing::Default2PinDevice<L0T, L0E>();
+  devices[1] = new MultiPing::Default2PinDevice<L1T, L1E>();
+  devices[2] = new MultiPing::Default2PinDevice<L2T, L2E>();
+  //  device = new MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, BOARD::D14, BOARD::D15>();
+
+#if 0
+  unsigned long start = micros();
+  int n = 0;
+  for (long i = 0; i < 1000l; i++) {
+    n += (int) device->isEchoing();
+  }
+  Serial.println( micros() - start );
+  start = micros();
+  for (long i = 0; i < 10000l; i++) {
+    n += (int) device->isEchoing();
+  }
+  Serial.println( micros() - start );
+  start = micros();
+  for (long i = 0; i < 100000l; i++) {
+    n += (int) device->isEchoing();
+  }
+  Serial.println( micros() - start );
+
+  /* No echo activity until after trigger goes low */
+  unsigned long t[30];
+  bool e[30];
+  device->begin();
+  device->beginTrigger();
+  delayMicroseconds(24);
+  device->finishTrigger();
+
+  for (long k = 0; k < 30; k++) {
+    t[k] = micros();
+    e[k] = device->isEchoing();
+  }
+  for (long k = 0; k < 30; k++) {
+    out.printf("%2d %10lu %d\n", k, t[k], (int) e[k] );
+  }
+#endif
 }
 
 void loop() {
-  calibrate(device);
+  //TRACE_START( &out );
+  calibrate(devices[0], a);
+  calibrate(devices[1], a);
+  calibrate(devices[2], a);
+  //TRACE_DUMP
+  //TRACE_DISABLE
+  delay(500);
 }

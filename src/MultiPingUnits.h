@@ -3,7 +3,7 @@
 
 namespace MultiPing {
 
-/**
+/*********************************************************************
  * Units and speed of sound related conversion class.
  * Pure static methods.
  * 
@@ -11,8 +11,8 @@ namespace MultiPing {
  * Set the current temperature using the static setTemperature 
  * method.  Subsequent conversions use the corresponding 
  * computed speed of sound for subsequent calculations.
- */
-class Units {
+ *********************************************************************/
+ class Units {
    public:
     /**
      * Convert seconds to microseconds.

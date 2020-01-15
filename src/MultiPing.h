@@ -1,7 +1,7 @@
 #ifndef MULTIPING_H
 #define MULTIPING_H 1
 /***
- * PolynomialFiltering.components.ICore
+ * MultiPing - Arduino Ultrasonic Sensor Library
  * (C) Copyright 2019 - Blue Lightning Development, LLC.
  * D. F. Linton. support@BlueLightningDevelopment.com
  *
@@ -36,8 +36,6 @@
 
 namespace MultiPing {
 
-#include <IGPIO.h>
-
 class Sonar : public Task {
    public:
     class Handler {
@@ -59,9 +57,10 @@ class Sonar : public Task {
     ~Sonar(){};
 
     enum ErrorCodes {
-        NO_PING = 0L,
-        STILL_PINGING = -1L,
-        PING_FAILED_TO_START = -2L,
+        NO_PING = 0L,                // device configured maximum echo return time elapsed
+        STILL_PINGING = -1L,         // prior ping never stopped; reset may help
+        PING_FAILED_TO_START = -2L,  // no device connected or device hard failure
+        PING_TOO_LONG = -3L,         // echo return time exceeded device maximum value
         N_ERRORS = 3
     };
 
@@ -69,7 +68,10 @@ class Sonar : public Task {
                Handler* handler);
     void stop();
 
-    void calibrate();
+    /**
+     * @returns NO_PING if echo detected or timed out; other error codes as normal
+     */
+    ErrorCodes check();
 
     bool dispatch(unsigned long now);
 

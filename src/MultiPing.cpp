@@ -1,5 +1,7 @@
 #include <MultiPing.h>
 
+#include <MultiPingTrace.h>
+
 #if _MULTIPING_DEBUG_
 #undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused
                                    // with << or >> streaming operators
@@ -76,6 +78,7 @@ bool Sonar::dispatch(unsigned long now) {
 }
 
 bool Sonar::triggerStartPing(unsigned long now) {
+    TRACE_TIMESTAMP( 1, getId() );
     device->begin();
     state = States::WAIT_LAST_FINISHED;
     enqueueShort(device->usecWaitEchoLowTimeout);
@@ -220,19 +223,21 @@ void Units::setTemperature(int dC) {
 
 float Units::us2m(unsigned long us) {
     float dT = ((float)cT) - (5.0 * (float)iSoS - 30.0);
+    float a;
     if (iSoS + 1 < nSoS) {
-        float a = (float)speedOfSound[iSoS].ms +
+        a = (float)speedOfSound[iSoS].ms +
                   0.001 * (float)speedOfSound[iSoS].mms;
         float b = (float)speedOfSound[iSoS + 1].ms +
                   0.001 * (float)speedOfSound[iSoS + 1].mms;
-        return a + dT * (b - a) / 5.0;
+        a = a + dT * (b - a) / 5.0;
     } else {
-        float a = (float)speedOfSound[iSoS - 1].ms +
+        a = (float)speedOfSound[iSoS - 1].ms +
                   0.001 * (float)speedOfSound[iSoS - 1].mms;
         float b = (float)speedOfSound[iSoS].ms +
                   0.001 * (float)speedOfSound[iSoS].mms;
-        return b + dT * (b - a) / 5.0;
+        a = b + dT * (b - a) / 5.0;
     }
+    return a * 1e-6 * (float) us;
 }
 
 float Units::us2cm(unsigned long us) { return 100.0 * us2m(us); }

@@ -62,18 +62,18 @@ UI::UiLED*  led;
 //#endif
 
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) //MEGA
-const BOARD::pin_t  L0T = BOARD::D54;
-const BOARD::pin_t  L0E = BOARD::D55;
-const BOARD::pin_t  L1T = BOARD::D56;
-const BOARD::pin_t  L1E = BOARD::D57;
-const BOARD::pin_t  L2T = BOARD::D58;
-const BOARD::pin_t  L2E = BOARD::D59;
-const BOARD::pin_t  R0T = BOARD::D30;
-const BOARD::pin_t  R0E = BOARD::D31;
-const BOARD::pin_t  R1T = BOARD::D32;
-const BOARD::pin_t  R1E = BOARD::D33;
-const BOARD::pin_t  R2T = BOARD::D34;
-const BOARD::pin_t  R2E = BOARD::D35;
+const BOARD::pin_t  R0T = BOARD::D54; // 
+const BOARD::pin_t  R0E = BOARD::D55; //
+const BOARD::pin_t  R1T = BOARD::D56; // A2
+const BOARD::pin_t  R1E = BOARD::D57; //
+const BOARD::pin_t  R2T = BOARD::D58; // A4
+const BOARD::pin_t  R2E = BOARD::D59;
+const BOARD::pin_t  L0T = BOARD::D22; //
+const BOARD::pin_t  L0E = BOARD::D23; //
+const BOARD::pin_t  L1T = BOARD::D24; 
+const BOARD::pin_t  L1E = BOARD::D25;
+const BOARD::pin_t  L2T = BOARD::D26;
+const BOARD::pin_t  L2E = BOARD::D27;
 #else  // UNO, NANO
 const BOARD::pin_t  L0T = BOARD::D14;
 const BOARD::pin_t  L0E = BOARD::D15;

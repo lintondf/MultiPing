@@ -3,6 +3,7 @@
 // with << or >> streaming operators
 #include <PrintEx.h>
 #include <RunningStatistics.h>
+#include <math.h>
 
 StreamEx out(Serial);
 
@@ -12,10 +13,11 @@ StreamEx out(Serial);
 void calibrate( MultiPing::Device* device, float a) {
   Serial.print("Trigger: "); Serial.println( device->getTriggerPin() );
   Serial.print("Echo:    "); Serial.println( device->getEchoPin() );
-  out.printf("Averaging %d samples...\n", 100 );
+  const int N = 1000;
+  out.printf("Averaging %d samples...\n", N );
   RunningStatistics stats, stat2;
   int notIdle = 0;
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < N; i++) {
     //      TRACE_TIMESTAMP(0,__LINE__);
     unsigned long start = micros();
     device->begin();
@@ -50,20 +52,20 @@ void calibrate( MultiPing::Device* device, float a) {
     delay(50);
   }
   out.printf(
-    "Trigger TE to Echo LE [us] (mean, min, max): %10.0f "
-    "%10.0f %10.0f\n",
-    stats.mean(), stats.minimum(),
+    "Trigger TE to Echo LE [us] (mean, std, min, max): %10.2f %10.3f "
+    "%10.2f %10.2f\n",
+    stats.mean(), sqrt(stats.variance()), stats.minimum(),
     stats.maximum());
   out.printf(
-    "Echo LE to Echo TE [us] (mean, min, max):    %10.0f "
-    "%10.0f %10.0f\n",
-    stat2.mean(), stat2.minimum(),
+    "Echo LE to Echo TE [us] (mean, std, min, max):    %10.2f %10.3f "
+    "%10.2f %10.2f\n",
+    stat2.mean(), sqrt(stat2.variance()), stat2.minimum(),
     stat2.maximum());
   out.printf(
-    "                   [in] (mean, min, max):    %10.2f "
+    "                   [in] (mean, std, min, max):    %10.2f %10.3f "
     "%10.2f %10.2f\n",
-    0.5*a*stat2.mean(), 0.5*a*stat2.minimum(),
-    0.5*a*stat2.maximum());
+    0.5 * a * stat2.mean(), 0.5 * a * sqrt(stat2.variance()), 0.5 * a * stat2.minimum(),
+    0.5 * a * stat2.maximum());
 }
 
 MultiPing::Device*  devices[6];
@@ -73,17 +75,17 @@ float a; // speed of sound [inches/microsecond]
 template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
 using BaseTwoPinPullup = MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, TPIN, EPIN>;
 
-const BOARD::pin_t  R0T = BOARD::D54; //
+const BOARD::pin_t  R0T = BOARD::D54; // PINF:0/A0
 const BOARD::pin_t  R0E = BOARD::D55; //
-const BOARD::pin_t  R1T = BOARD::D56; // A2
+const BOARD::pin_t  R1T = BOARD::D56; // PINF:2/A2
 const BOARD::pin_t  R1E = BOARD::D57; //
-const BOARD::pin_t  R2T = BOARD::D58; // A4
+const BOARD::pin_t  R2T = BOARD::D58; // PINF:4/A4
 const BOARD::pin_t  R2E = BOARD::D59;
-const BOARD::pin_t  L0T = BOARD::D22; //
-const BOARD::pin_t  L0E = BOARD::D23; //
-const BOARD::pin_t  L1T = BOARD::D24;
+const BOARD::pin_t  L0T = BOARD::D22; // PINA:0
+const BOARD::pin_t  L0E = BOARD::D23; 
+const BOARD::pin_t  L1T = BOARD::D24; // PINA:2
 const BOARD::pin_t  L1E = BOARD::D25;
-const BOARD::pin_t  L2T = BOARD::D26;
+const BOARD::pin_t  L2T = BOARD::D26; // PINA:4
 const BOARD::pin_t  L2E = BOARD::D27;
 
 void setup() {
@@ -100,6 +102,9 @@ void setup() {
   devices[0] = new MultiPing::Default2PinDevice<L0T, L0E>();
   devices[1] = new MultiPing::Default2PinDevice<L1T, L1E>();
   devices[2] = new MultiPing::Default2PinDevice<L2T, L2E>();
+  devices[3] = new MultiPing::Default2PinDevice<R0T, R0E>();
+  devices[4] = new MultiPing::Default2PinDevice<R1T, R1E>();
+  devices[5] = new MultiPing::Default2PinDevice<R2T, R2E>();
   //  device = new MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, BOARD::D14, BOARD::D15>();
 
 #if 0
@@ -141,8 +146,11 @@ void setup() {
 void loop() {
   //TRACE_START( &out );
   calibrate(devices[0], a);
-  calibrate(devices[1], a);
-  calibrate(devices[2], a);
+    calibrate(devices[1], a);
+    calibrate(devices[2], a);
+    calibrate(devices[3], a);
+    calibrate(devices[4], a);
+    calibrate(devices[5], a);
   //TRACE_DUMP
   //TRACE_DISABLE
   delay(500);

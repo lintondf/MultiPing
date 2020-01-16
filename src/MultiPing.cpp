@@ -13,9 +13,13 @@
 namespace MultiPing {
 
 void Sonar::recycle(unsigned long now) {
-    unsigned long t = unsignedDistance(now, cycleStart);
-    while (t > usCycleTime) t -= usCycleTime;
-    usecDelay = usCycleTime - t;
+    if (usCycleTime == 0) {
+        usecDelay = 1000;
+    } else {
+        unsigned long t = unsignedDistance(now, cycleStart);
+        while (t > usCycleTime) t -= usCycleTime;
+        usecDelay = usCycleTime - t;
+    }
     whenEnqueued = now;
     waitEvent(false);
 #if _MULTIPING_DEBUG_ > 2
@@ -78,7 +82,7 @@ bool Sonar::dispatch(unsigned long now) {
 }
 
 bool Sonar::triggerStartPing(unsigned long now) {
-    TRACE_TIMESTAMP( 1, getId() );
+    //TRACE_TIMESTAMP( 1, getId() );
     device->begin();
     state = States::WAIT_LAST_FINISHED;
     enqueueShort(device->usecWaitEchoLowTimeout);
@@ -169,42 +173,27 @@ bool Sonar::waitEchoComplete(unsigned long now) {
     return true;
 }
 
-void Sonar::calibrate() {
-#if _MULTIPING_DEBUG_
-    RunningStatistics stats, stat2;
-    for (int i = 0; i < 100; i++) {
-        trigger.output();
-        trigger.low();
-        // TODO single pin support
-        echo.input();
-        echo.pullup();
-        while (echo.read())
-            ;
-        trigger.pulse(24);
-        unsigned long waitStart = micros();
-        while (!echo.read())
-            ;
-        unsigned long echoStart = micros();
-        while (echo.read())
-            ;
-        unsigned long echoFinish = micros();
-        stats.push(unsignedDistance(echoStart, waitStart));
-        stat2.push(unsignedDistance(waitStart, echoFinish));
-        delay(50);
+Sonar::ErrorCodes Sonar::check() {
+    device->begin();
+    delayMicroseconds( device->usecWaitEchoLowTimeout );
+    if (device->isEchoing()) {
+        device->reset();
+        return STILL_PINGING;
     }
-    if (dbg)
-        dbg->printf(
-            "%2d Trigger TE to Echo LE (us, mean, var, min, max): %10.0f "
-            "%10.0f %10.0f %10.0f\n",
-            getId(), stats.mean(), stats.variance(), stats.minimum(),
-            stats.maximum());
-    if (dbg)
-        dbg->printf(
-            "%2d Echo LE to Echo TE (us, mean, var, min, max):    %10.0f "
-            "%10.0f %10.0f %10.0f\n",
-            getId(), stat2.mean(), stat2.variance(), stat2.minimum(),
-            stat2.maximum());
-#endif            
+    device->beginTrigger();
+    delayMicroseconds( device->usecTriggerPulseDuration);
+    device->finishTrigger();
+    delayMicroseconds( device->usecMaxEchoStartDelay );
+    if (!device->isEchoing()) {
+        device->reset();
+        return PING_FAILED_TO_START;
+    }
+    delay( device->usecMaxEchoDuration / 1000ul );
+    if (device->isEchoing()) {
+        device->reset();
+        return PING_TOO_LONG;
+    }
+    return NO_PING;
 }
 
 int Units::iSoS = (0 + 30) / 5;

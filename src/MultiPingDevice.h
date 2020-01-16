@@ -27,46 +27,46 @@ class Device {
      * Get the trigger pin assignment
      * @return pin on BOARD
      */
-    virtual BOARD::pin_t getTriggerPin() = 0;
+    virtual BOARD::pin_t getTriggerPin() const = 0;
 
     /** 
      * Get the echo pin assignment
      * @return pin on BOARD
      */
-    virtual BOARD::pin_t getEchoPin() = 0;
+    virtual BOARD::pin_t getEchoPin() const = 0;
 
     /**
      * Test the echoing status of the device
      * @return true if echoing
      */
-    virtual bool isEchoing() = 0;
+    virtual bool isEchoing() const = 0;
 
     /**
      * Perform any device-specific setup at the start of a ping cycle
      */
-    virtual void begin() = 0;
+    virtual void begin() const = 0;
 
     /**
      * Perform any device-specific action required to start trigger a ping
      */
-    virtual void beginTrigger() = 0;
+    virtual void beginTrigger() const = 0;
 
     /**
      * Perform any device-specific action required to finish trigger a ping
      */
-    virtual void finishTrigger() = 0;
+    virtual void finishTrigger() const = 0;
 
     /**
      * Perform any device-specific action required after the end of an echo is
      * detected/
      */
-    virtual void finish() = 0;
+    virtual void finish() const = 0;
 
     /**
      * Perform any device-specific action required to reset a potentially
      * malfunctioning sensor
      */
-    virtual void reset() = 0;
+    virtual void reset() const = 0;
 
     /// minimum microseconds to wait for any prior echo activity to finish
     unsigned int usecWaitEchoLowTimeout = 10u;
@@ -85,30 +85,30 @@ class Device {
 template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
 class Default2PinDevice : public Device {
    public:
-    DefaultDevice() {}
+    Default2PinDevice() {}
 
-    inline BOARD::pin_t getTriggerPin() { return TPIN; }
-    inline BOARD::pin_t getEchoPin() { return EPIN; }
+    inline BOARD::pin_t getTriggerPin() const { return TPIN; }
+    inline BOARD::pin_t getEchoPin() const { return EPIN; }
 
-    bool isEchoing() { return echo.read(); }
+    bool isEchoing() const { return echo.read(); }
 
-    void begin() {
+    void begin() const {
         echo.input();
     }
 
-    void beginTrigger() {
+    void beginTrigger() const {
         trigger.output();
         trigger.low();
         trigger.high();
     }
 
-    void finishTrigger() {
+    void finishTrigger() const {
         trigger.low();
     }
 
-    void finish() {}
+    void finish() const {}
 
-    void reset() {
+    void reset() const {
         trigger.low();
         echo.output();
         echo.low();
@@ -124,7 +124,7 @@ class Default2PinDeviceWithPullup : public Device<EPIN, TPIN> {
     public:
     Default2PinDeviceWithPullup() : Device<EPIN, TPIN>() {
     }
-    void begin() {
+    void begin() const {
         Device<EPIN,TPIN>::begin();
         Device<EPIN,TPIN>::echo.pullup();
     }
@@ -135,7 +135,7 @@ class OnePinWrapper : public Device<PIN, PIN> {
     public:
     OnePinWrapper() : Device<PIN, PIN>() {
     }
-    void finishTrigger() {
+    void finishTrigger() const {
         Device<PIN,PIN>::finishTrigger();
         Device<PIN,PIN>::echo.input();
     }
@@ -146,14 +146,14 @@ class OnePinWithPullupWrapper : public Device<PIN, PIN> {
     public:
     OnePinWithPullupWrapper() : Device<PIN, PIN>() {
     }
-    void finishTrigger() {
+    void finishTrigger() const {
         Device<PIN,PIN>::finishTrigger();
         Device<PIN,PIN>::echo.input();
         Device<PIN,PIN>::echo.pullup();
     }
 };
 
-typedef enum InputModes {
+enum InputModes {
   PULLUP, OPEN_COLLECTOR
 };
 

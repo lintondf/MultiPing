@@ -36,6 +36,7 @@ bool Sonar::start(unsigned long usStartDelay, unsigned long usCycleTime,
     this->usCycleTime = usCycleTime;
     state = IDLE;
     enqueueLong(usStartDelay);
+    return true;
 }
 
 void Sonar::stop() {
@@ -79,6 +80,7 @@ bool Sonar::dispatch(unsigned long now) {
         case WAIT_ECHO:
             return waitEchoComplete(now);
     }
+    return false;
 }
 
 bool Sonar::triggerStartPing(unsigned long now) {

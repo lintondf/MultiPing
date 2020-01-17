@@ -73,19 +73,25 @@ class Device {
     /// minimum microseconds between beginTrigger() and finishTrigger() actions
     unsigned int usecTriggerPulseDuration = 24u;
     /// maximum microseonds after finishTrigger() to wait for an echo to start
-    unsigned long usecMaxEchoStartDelay = 500u;
+    unsigned long usecMaxEchoStartDelay = 500ul;
     /// maximum microseonds to wait for a started echo to finish; NO_ECHO
     /// warning on timeout
     unsigned long usecMaxEchoDuration = 60000ul;
 };
 
+enum InputModes {
+  PULLUP, OPEN_COLLECTOR
+};
+
+
+
 /*********************************************************************
  * Generic two-wire ultrasonic sensor device-level manager
  *********************************************************************/
-template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
-class Default2PinDevice : public Device {
+template <BOARD::pin_t TPIN, BOARD::pin_t EPIN, InputModes MODE = OPEN_COLLECTOR>
+class GenericDevice : public Device {
    public:
-    Default2PinDevice() {}
+    GenericDevice() {}
 
     inline BOARD::pin_t getTriggerPin() const { return TPIN; }
     inline BOARD::pin_t getEchoPin() const { return EPIN; }
@@ -94,6 +100,9 @@ class Default2PinDevice : public Device {
 
     void begin() const {
         echo.input();
+        if (MODE == PULLUP) {
+          echo.pullup();
+        }
     }
 
     void beginTrigger() const {
@@ -104,6 +113,9 @@ class Default2PinDevice : public Device {
 
     void finishTrigger() const {
         trigger.low();
+        if (TPIN == EPIN) {
+          echo.input();
+        }
     }
 
     void finish() const {}
@@ -119,28 +131,12 @@ class Default2PinDevice : public Device {
     GPIO<EPIN> echo;
 };
 
-template <template <BOARD::pin_t TPIN, BOARD::pin_t EPIN> class Device, BOARD::pin_t TPIN, BOARD::pin_t EPIN>
-class Default2PinDeviceWithPullup : public Device<EPIN, TPIN> {
-    public:
-    Default2PinDeviceWithPullup() : Device<EPIN, TPIN>() {
-    }
-    void begin() const {
-        Device<EPIN,TPIN>::begin();
-        Device<EPIN,TPIN>::echo.pullup();
-    }
-};
+template <BOARD::pin_t TPIN, BOARD::pin_t EPIN, InputModes MODE = OPEN_COLLECTOR>
+using Default2PinDevice = GenericDevice<TPIN, EPIN, MODE>;
+template <BOARD::pin_t PIN, InputModes MODE = OPEN_COLLECTOR>
+using Default1PinDevice = GenericDevice<PIN, PIN, MODE>;
 
-template <template <BOARD::pin_t TPIN, BOARD::pin_t EPIN> class Device, BOARD::pin_t PIN>
-class OnePinWrapper : public Device<PIN, PIN> {
-    public:
-    OnePinWrapper() : Device<PIN, PIN>() {
-    }
-    void finishTrigger() const {
-        Device<PIN,PIN>::finishTrigger();
-        Device<PIN,PIN>::echo.input();
-    }
-};
-
+#if 0
 template <template <BOARD::pin_t TPIN, BOARD::pin_t EPIN> class Device, BOARD::pin_t PIN>
 class OnePinWithPullupWrapper : public Device<PIN, PIN> {
     public:
@@ -252,6 +248,7 @@ class O<PIN, OPEN_COLLECTOR> : public SBase {
   delay(500);
   while(true) ;
 */
+#endif 
 
 }  // namespace MultiPing
 

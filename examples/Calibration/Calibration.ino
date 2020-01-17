@@ -72,8 +72,6 @@ MultiPing::Device*  devices[6];
 
 float a; // speed of sound [inches/microsecond]
 
-template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
-using BaseTwoPinPullup = MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, TPIN, EPIN>;
 
 const BOARD::pin_t  R0T = BOARD::D54; // PINF:0/A0
 const BOARD::pin_t  R0E = BOARD::D55; //
@@ -99,13 +97,14 @@ void setup() {
   //  device = new BaseTwoPinPullup<BOARD::D22, BOARD::D23>(); //TODO FAILS
   // device = new MultiPing::Default2PinDevice<BOARD::D54, BOARD::D55>();
   //  device = new MultiPing::Default2PinDevice<BOARD::D56, BOARD::D57>();  // N/C
-  devices[0] = new MultiPing::Default2PinDevice<L0T, L0E>();
-  devices[1] = new MultiPing::Default2PinDevice<L1T, L1E>();
-  devices[2] = new MultiPing::Default2PinDevice<L2T, L2E>();
-  devices[3] = new MultiPing::Default2PinDevice<R0T, R0E>();
-  devices[4] = new MultiPing::Default2PinDevice<R1T, R1E>();
-  devices[5] = new MultiPing::Default2PinDevice<R2T, R2E>();
-  //  device = new MultiPing::Default2PinDeviceWithPullup<MultiPing::Default2PinDevice, BOARD::D14, BOARD::D15>();
+  devices[0] = new MultiPing::Default2PinDevice<L0T, L0E, MultiPing::PULLUP>();
+  devices[1] = new MultiPing::Default2PinDevice<L1T, L1E, MultiPing::PULLUP>();
+  devices[2] = new MultiPing::Default2PinDevice<L2T, L2E, MultiPing::PULLUP>();
+  devices[3] = new MultiPing::Default2PinDevice<R0T, R0E, MultiPing::PULLUP>();
+  devices[4] = new MultiPing::Default2PinDevice<R1T, R1E, MultiPing::PULLUP>();
+  devices[5] = new MultiPing::Default2PinDevice<R2T, R2E, MultiPing::PULLUP>();
+//  devices[6] = new MultiPing::Default1PinDevice<BOARD::D14>();
+//  devices[6] = new MultiPing::Default1PinDevice<BOARD::D14, MultiPing::OPEN_COLLECTOR>();
 
 #if 0
   unsigned long start = micros();

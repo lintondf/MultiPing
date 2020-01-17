@@ -109,7 +109,7 @@ bool Sonar::triggerWaitLastFinished(unsigned long now) {
 
 bool Sonar::triggerWaitTriggerPulse(unsigned long now) {
     device->finishTrigger();
-    timeout = micros() + device->usecMaxEchoDuration + device->usecMaxEchoStartDelay;
+    timeout = micros() + device->usecMaxEchoStartDelay;
     // Maximum time we'll wait for ping to start
     state = States::WAIT_ECHO_STARTED;
     waitEvent(true);

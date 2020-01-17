@@ -2,8 +2,6 @@
 //#include <AUnitVerbose.h>
 using namespace aunit;
 
-#include <ArduinoSTL.h>
-
 #include <MultiPing.h>
 
 test(basic) {
@@ -32,13 +30,13 @@ test(tabulatedPoints) {
 
 test(interpolatedPoints) {
   for (float t = -30.0; t <= 50.0; t += 1.0) {
-    //Serial.print(t); Serial.print(" ");
+//    Serial.print(t); Serial.print(" ");
     MultiPing::Units::setTemperature((int) t);
     double a0 = sqrt(1.4f*286.9f*(273.15f+t));
-    //Serial.print(a0); Serial.print(" ");
+//    Serial.print(a0); Serial.print(" ");
     float a1 = MultiPing::Units::us2m(1000000ul);
-    //Serial.print(a1); Serial.print(" ");
-    //Serial.println( 1e6*(a1 - a0) );
+//    Serial.print(a1); Serial.print(" ");
+//    Serial.println( 1e6*(a1 - a0) );
     assertTrue( abs(a1-a0) < 0.005 );
   }  
 }
@@ -48,15 +46,15 @@ void setup() {
   Serial.begin(115200); // ESP8266 default of 74880 not supported on Linux
   while(!Serial); // for the Arduino Leonardo/Micro only
 
-//  for (float t = -30.0; t <= 50.0; t += 1.0) {
-//    Serial.print(t); Serial.print(" ");
-//    MultiPing::Units::setTemperature((int) t);
-//    double a0 = sqrt(1.4f*286.9f*(273.15f+t));
-//    Serial.print(a0); Serial.print(" ");
-//    float a1 = MultiPing::Units::us2m(1000000ul);
-//    Serial.print(a1); Serial.print(" ");
-//    Serial.println( 1e6*(a1 - a0) );
-//  }
+  for (float t = 23.33333; t <= 24.0; t += 1.0) {
+    Serial.print(t); Serial.print(" ");
+    MultiPing::Units::setTemperature((int) t);
+    double a0 = sqrt(1.4f*286.9f*(273.15f+t));
+    Serial.print(a0); Serial.print(" ");
+    float a1 = MultiPing::Units::us2m(1000000ul);
+    Serial.print(a1); Serial.print(" ");
+    Serial.println( 1e6*(a1 - a0) );
+  }
 }
 
 void loop() {

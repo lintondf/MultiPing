@@ -23,13 +23,13 @@ class Device {
     Device() {}
     ~Device() {}
 
-    /** 
+    /**
      * Get the trigger pin assignment
      * @return pin on BOARD
      */
     virtual BOARD::pin_t getTriggerPin() const = 0;
 
-    /** 
+    /**
      * Get the echo pin assignment
      * @return pin on BOARD
      */
@@ -79,11 +79,7 @@ class Device {
     unsigned long usecMaxEchoDuration = 60000ul;
 };
 
-enum InputModes {
-  PULLUP, OPEN_COLLECTOR
-};
-
-
+enum InputModes { PULLUP, OPEN_COLLECTOR };
 
 /*********************************************************************
  * Generic two-wire ultrasonic sensor device-level manager
@@ -101,7 +97,7 @@ class GenericDevice : public Device {
     void begin() const {
         echo.input();
         if (MODE == PULLUP) {
-          echo.pullup();
+            echo.pullup();
         }
     }
 
@@ -114,7 +110,7 @@ class GenericDevice : public Device {
     void finishTrigger() const {
         trigger.low();
         if (TPIN == EPIN) {
-          echo.input();
+            echo.input();
         }
     }
 
@@ -135,120 +131,6 @@ template <BOARD::pin_t TPIN, BOARD::pin_t EPIN, InputModes MODE = OPEN_COLLECTOR
 using Default2PinDevice = GenericDevice<TPIN, EPIN, MODE>;
 template <BOARD::pin_t PIN, InputModes MODE = OPEN_COLLECTOR>
 using Default1PinDevice = GenericDevice<PIN, PIN, MODE>;
-
-#if 0
-template <template <BOARD::pin_t TPIN, BOARD::pin_t EPIN> class Device, BOARD::pin_t PIN>
-class OnePinWithPullupWrapper : public Device<PIN, PIN> {
-    public:
-    OnePinWithPullupWrapper() : Device<PIN, PIN>() {
-    }
-    void finishTrigger() const {
-        Device<PIN,PIN>::finishTrigger();
-        Device<PIN,PIN>::echo.input();
-        Device<PIN,PIN>::echo.pullup();
-    }
-};
-
-enum InputModes {
-  PULLUP, OPEN_COLLECTOR
-};
-
-class SBase {
-  public:
-  SBase(BOARD::pin_t TPIN, BOARD::pin_t EPIN) {
-    Serial.print("SBase(");
-    Serial.print(TPIN);
-    Serial.print(",");
-    Serial.print(EPIN);
-    Serial.println(")");
-  }
-  void input() {
-    Serial.println("SBase::input");
-  };
-  void listen() {
-    Serial.println("SBase::listen");
-  };
-};
-
-template <BOARD::pin_t TPIN, InputModes = OPEN_COLLECTOR>
-class O;
-
-template <BOARD::pin_t TPIN, BOARD::pin_t EPIN, InputModes = OPEN_COLLECTOR>
-class S;
-
-template<BOARD::pin_t TPIN, BOARD::pin_t EPIN>
-class S<TPIN, EPIN, PULLUP> : public SBase {
-  public:
-  S() : SBase(TPIN, EPIN) {}
-  void input() {
-    SBase::input();
-    Serial.println("PULLUP");
-  }
-};
-
-template<BOARD::pin_t TPIN, BOARD::pin_t EPIN>
-class S<TPIN, EPIN, OPEN_COLLECTOR> : public SBase {
-  public:
-  S() : SBase(TPIN, EPIN) {}
-  void input() {
-    SBase::input();
-    Serial.println("OPEN_COLLECTOR");
-  }
-};
-
-template<BOARD::pin_t PIN>
-class O<PIN, PULLUP> : public SBase {
-  public:
-  O() : SBase(PIN, PIN) {}
-  void input() {
-    SBase::input();
-    Serial.println("PULLUP");
-  }
-  void listen() {
-    SBase::listen();
-    Serial.println("SWITCH");
-  }
-};
-
-template<BOARD::pin_t PIN>
-class O<PIN, OPEN_COLLECTOR> : public SBase {
-  public:
-  O() : SBase(PIN, PIN) {}
-  void input() {
-    SBase::input();
-    Serial.println("OPEN_COLLECTOR");
-  }
-  void listen() {
-    SBase::listen();
-    Serial.println("SWITCH");
-  }
-};
-
-
-/*
-  delay(500);
-  S<BOARD::D14, BOARD::D15, PULLUP> pullup;
-  S<BOARD::D14, BOARD::D15, OPEN_COLLECTOR> open;
-  S<BOARD::D14, BOARD::D15> which;
-  pullup.input();
-  pullup.listen();
-  open.input();
-  open.listen();
-  which.input();
-  which.listen();
-  O<BOARD::D16, PULLUP> pullup1;
-  O<BOARD::D16, OPEN_COLLECTOR> open1;
-  O<BOARD::D16> which1;
-  pullup1.input();
-  pullup1.listen();
-  open1.input();
-  open1.listen();
-  which1.input();
-  which1.listen();
-  delay(500);
-  while(true) ;
-*/
-#endif 
 
 }  // namespace MultiPing
 

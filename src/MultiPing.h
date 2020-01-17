@@ -30,9 +30,9 @@
 //#include <avr/pgmspace.h>
 #endif
 
-#include <MultiPingUnits.h>
-#include <Task.h> //TODO  ->MultiPingTask
 #include <MultiPingDevice.h>
+#include <MultiPingUnits.h>
+#include <Task.h>  //TODO  ->MultiPingTask
 
 namespace MultiPing {
 
@@ -60,18 +60,21 @@ class Sonar : public Task {
         NO_PING = 0L,                // device configured maximum echo return time elapsed
         STILL_PINGING = -1L,         // prior ping never stopped; reset may help
         PING_FAILED_TO_START = -2L,  // no device connected or device hard failure
-        PING_TOO_LONG = -3L,         // echo return time exceeded device maximum value
         N_ERRORS = 3
     };
 
-    bool start(unsigned long usStartDelay, unsigned long usCycleTime,
-               Handler* handler);
+    bool start(unsigned long usStartDelay, unsigned long usCycleTime, Handler* handler);
     void stop();
 
     /**
-     * @returns NO_PING if echo detected or timed out; other error codes as normal
+     * Non-Multiplexed single sensor distance measurement.
+     * Can be used as a startup diagnostic.
+     *
+     * @returns > 0; round trip echo time in microseconds;
+     *          == 0 (NO_PING) if ping timed out;
+     *          < 0 ErrorCodes
      */
-    ErrorCodes check();
+    unsigned long check();
 
     bool dispatch(unsigned long now);
 
@@ -97,13 +100,11 @@ class Sonar : public Task {
 
     bool triggerStartPing(unsigned long now);
     bool triggerWaitLastFinished(unsigned long now);
-    bool triggerWaitEchoStarted(
-        unsigned long now);  // after ECHO high -> "wait echo complete"; invokes
-                             // errorFunc otherwise
+    bool triggerWaitEchoStarted(unsigned long now);  // after ECHO high -> "wait echo complete";
+                                                     // invokes errorFunc otherwise
     bool triggerWaitTriggerPulse(unsigned long now);
-    bool waitEchoComplete(
-        unsigned long now);  // invokes echoFunction unless times out; invokes
-                             // errorFunc otherwise
+    bool waitEchoComplete(unsigned long now);  // invokes echoFunction unless times out; invokes
+                                               // errorFunc otherwise
 
 };  // Sonar
 }  // namespace MultiPing

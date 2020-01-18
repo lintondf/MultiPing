@@ -30,6 +30,8 @@ int freeMemory() {
 #include <UiLED.h>
 
 UI::UiLED*  led;
+UI::Proximity proximities[UI::N_SENSORS];
+
 
 //#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 //const IGPIO& L0T = VGPIO<BOARD::D54>();
@@ -137,19 +139,19 @@ class Monitor : public MultiPing::Task {
     char line[1+12+6*11+1*5+3+1];
     int n = sprintf( line, "$%lu,%d;", now, nDetectors );
     // Serial.print( now ); Serial.print(" ");
-    UI::Proximity proximities[nDetectors];
+    UI::Proximity* proximtyBase = &proximities[UI::LEFT_0];
     for (int i = 0; i < nDetectors; i++) {
       n += sprintf( line+n, "%u", detectors[i]->getLastDetect() );
       //Serial.print( detectors[i]->getLastDetect() ); Serial.print("/");
-      proximities[i] = UI::CLEAR;
+      *(proximtyBase+i) = UI::CLEAR;
       if (detectors[i]->getLastDetect() < 4000)
-        proximities[i] = UI::WARNING;
+        *(proximtyBase+i) = UI::WARNING;
       if (detectors[i]->getLastDetect() < 2500)
-        proximities[i] = UI::HAZARD;
+        *(proximtyBase+i) = UI::HAZARD;
       if (detectors[i]->getLastDetect() <  300)
-        proximities[i] = UI::DANGER;
+        *(proximtyBase+i) = UI::DANGER;
       if (detectors[i]->getLastDetect() == 0)
-        proximities[i] = UI::ERROR;
+        *(proximtyBase+i) = MultiPing::Sonar::NO_PING;
        
       int errors[MultiPing::Sonar::N_ERRORS];
       detectors[i]->getAndClearErrors(errors);
@@ -162,7 +164,7 @@ class Monitor : public MultiPing::Task {
     if(led) led->update(proximities);
     //Serial.println( freeMemory() );
     n += sprintf( line+n, "%u;", freeMemory() );
-    uint8_t crc = cksum( line, n );
+    uint8_t crc = cksum( (const uint8_t*) line, n );
     sprintf( line+n, "%2.2X$\n", crc );
     Serial.print(line);
     enqueueLong( interval );
@@ -176,8 +178,10 @@ class Monitor : public MultiPing::Task {
   UI::UiLED*  led;
 };
 
-unsigned long Monitor::interval = MultiPing::Units::ms2us(180*2);
+unsigned long Monitor::interval = MultiPing::Units::ms2us(180);
 
+template <BOARD::pin_t TPIN, BOARD::pin_t EPIN>
+using MyDevice = MultiPing::GenericDevice<TPIN, EPIN, MultiPing::PULLUP>;
 
 Monitor monitor;
 
@@ -204,12 +208,12 @@ void setup() {
     sensors[i].start(MultiPing::Units::ms2us(100) + MultiPing::Units::ms2us(40)*(long)i, MultiPing::Units::ms2us(1200), new Detection());
 #else
   int i = 0;
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 0, new MultiPing::Default2PinDevice<L0T, L0E>() );
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 1, new MultiPing::Default2PinDevice<L1T, L1E>() );
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 2, new MultiPing::Default2PinDevice<L2T, L2E>() );
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 0, new MultiPing::Default2PinDevice<R0T, R0E>() );
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 1, new MultiPing::Default2PinDevice<R1T, R1E>() );
-  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 2, new MultiPing::Default2PinDevice<R2T, R2E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 0, new MyDevice<L0T, L0E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 1, new MyDevice<L1T, L1E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::LEFT  + 2, new MyDevice<L2T, L2E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 0, new MyDevice<R0T, R0E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 1, new MyDevice<R1T, R1E>() );
+  if (i < nDetectors) detectors[i++] = new Detector( Detector::Sides::RIGHT + 2, new MyDevice<R2T, R2E>() );
   
   for (int i = 0; i < nDetectors; i++)
     detectors[i]->start();  

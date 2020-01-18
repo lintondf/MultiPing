@@ -237,7 +237,7 @@ void TaskList::push_priority(Task* task) {
     if (this->size() == 0 || Task::lessThan(task, peek())) {
         this->push_front(task);  // add at head
     } else {                     // add in middle
-        for (TaskList::Iterator it = this->begin(); it != this->end(); it++) {
+        for (TaskList::Iterator it = this->begin(); it != this->end(); ++it) {
             if (Task::lessThan(task, *it)) {
                 insert(it, task);
                 return;

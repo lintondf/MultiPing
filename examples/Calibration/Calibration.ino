@@ -13,7 +13,7 @@ StreamEx out(Serial);
 void calibrate( MultiPing::Device* device, float a) {
   Serial.print("Trigger: "); Serial.println( device->getTriggerPin() );
   Serial.print("Echo:    "); Serial.println( device->getEchoPin() );
-  const int N = 100;
+  const int N = 500;
   out.printf("Averaging %d samples...\n", N );
   RunningStatistics stats, stat2;
   int notIdle = 0;
@@ -72,7 +72,7 @@ MultiPing::Device*  devices[6];
 
 float a; // speed of sound [inches/microsecond]
 
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) //MEGA
+
 const BOARD::pin_t  R0T = BOARD::D54; // PINF:0/A0
 const BOARD::pin_t  R0E = BOARD::D55; //
 const BOARD::pin_t  R1T = BOARD::D56; // PINF:2/A2
@@ -85,29 +85,14 @@ const BOARD::pin_t  L1T = BOARD::D24; // PINA:2
 const BOARD::pin_t  L1E = BOARD::D25;
 const BOARD::pin_t  L2T = BOARD::D26; // PINA:4
 const BOARD::pin_t  L2E = BOARD::D27;
-#else
-const BOARD::pin_t  L0T = BOARD::D14;
-const BOARD::pin_t  L0E = BOARD::D15;
-const BOARD::pin_t  L1T = BOARD::D16;
-const BOARD::pin_t  L1E = BOARD::D17;
-const BOARD::pin_t  L2T = BOARD::D18;
-const BOARD::pin_t  L2E = BOARD::D19;
-const BOARD::pin_t  R0T = BOARD::D2;
-const BOARD::pin_t  R0E = BOARD::D3;
-const BOARD::pin_t  R1T = BOARD::D4;
-const BOARD::pin_t  R1E = BOARD::D5;
-const BOARD::pin_t  R2T = BOARD::D9;
-const BOARD::pin_t  R2E = BOARD::D10;
-#endif
-
 
 void setup() {
   Serial.begin(115200);
   while (!Serial) ;
   Serial.println("Sensor Calibration");
-  MultiPing::Units::setTemperature( (int) 5.0 / 9.5 * (74.0 - 32.0) );
+  MultiPing::Units::setTemperature( (int) 5.0 / 9.5 * (71.0 - 32.0) );
   a = MultiPing::Units::us2in(1ul);
-  Serial.print( 1.0e6*a ); Serial.println( " in/s" );
+  Serial.print( 1e6*a ); Serial.println( " in/s" );
 
   //  device = new BaseTwoPinPullup<BOARD::D22, BOARD::D23>(); //TODO FAILS
   // device = new MultiPing::Default2PinDevice<BOARD::D54, BOARD::D55>();
@@ -160,12 +145,13 @@ void setup() {
 void loop() {
   //TRACE_START( &out );
   calibrate(devices[0], a);
-//    calibrate(devices[1], a);
-//    calibrate(devices[2], a);
-//    calibrate(devices[3], a);
-//    calibrate(devices[4], a);
-//    calibrate(devices[5], a);
+    calibrate(devices[1], a);
+    calibrate(devices[2], a);
+    calibrate(devices[3], a);
+    calibrate(devices[4], a);
+    calibrate(devices[5], a);
   //TRACE_DUMP
   //TRACE_DISABLE
   delay(500);
+  while(true) ;
 }

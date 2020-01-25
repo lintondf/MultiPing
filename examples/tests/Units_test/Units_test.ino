@@ -4,6 +4,16 @@ using namespace aunit;
 
 #include <MultiPing.h>
 
+#ifdef MULTIPING_UNITS_FIXED_SPEEDOFSOUND
+test(fixed) {
+  int A[] = MULTIPING_UNITS_FIXED_SPEEDOFSOUND;
+  unsigned long a = 1000ul * (unsigned long)A[0];
+  a += (unsigned long)A[1];
+  unsigned long t = 1000000ul;
+  assertEqual( t, MultiPing::Units::s2us(1) );
+  assertEqual( MultiPing::Units::us2mm(t), a );  
+}
+#else
 test(basic) {
   unsigned long t = 1000000ul;
   MultiPing::Units::setTemperature(0);
@@ -30,31 +40,37 @@ test(tabulatedPoints) {
 
 test(interpolatedPoints) {
   for (float t = -30.0; t <= 50.0; t += 1.0) {
-//    Serial.print(t); Serial.print(" ");
     MultiPing::Units::setTemperature((int) t);
     double a0 = sqrt(1.4f*286.9f*(273.15f+t));
-//    Serial.print(a0); Serial.print(" ");
     float a1 = MultiPing::Units::us2m(1000000ul);
+//    Serial.print(t); Serial.print(" ");
+//    Serial.print(a0); Serial.print(" ");
 //    Serial.print(a1); Serial.print(" ");
 //    Serial.println( 1e6*(a1 - a0) );
     assertTrue( abs(a1-a0) < 0.005 );
   }  
 }
 
+#if MULTIPING_UNITS_SET_FLOAT_TERMPERATURE
+test(floatingTemperatures) {
+  for (float t = -30.0; t <= 50.0; t += 0.1) {
+    MultiPing::Units::setTemperature(t);
+    double a0 = sqrt(1.4f*286.9f*(273.15f+t));
+    float a1 = MultiPing::Units::us2m(1000000ul);
+//    Serial.print(t); Serial.print(" ");
+//    Serial.print(a0); Serial.print(" ");
+//    Serial.print(a1); Serial.print(" ");
+//    Serial.println( 1e6*(a1 - a0) );
+    assertTrue( abs(a1-a0) < 0.005 );
+  }  
+}
+#endif
+#endif
+
 void setup() {
   delay(1000); // wait for stability on some boards to prevent garbage Serial
   Serial.begin(115200); // ESP8266 default of 74880 not supported on Linux
   while(!Serial); // for the Arduino Leonardo/Micro only
-
-  for (float t = 23.33333; t <= 24.0; t += 1.0) {
-    Serial.print(t); Serial.print(" ");
-    MultiPing::Units::setTemperature((int) t);
-    double a0 = sqrt(1.4f*286.9f*(273.15f+t));
-    Serial.print(a0); Serial.print(" ");
-    float a1 = MultiPing::Units::us2m(1000000ul);
-    Serial.print(a1); Serial.print(" ");
-    Serial.println( 1e6*(a1 - a0) );
-  }
 }
 
 void loop() {

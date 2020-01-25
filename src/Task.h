@@ -31,6 +31,8 @@ static StreamEx out(Serial);
 class StreamEx;
 #endif
 
+
+
 namespace MultiPing {
 class Task;
 class TaskList;

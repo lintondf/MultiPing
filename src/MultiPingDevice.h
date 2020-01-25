@@ -10,7 +10,7 @@
  * See separate LICENSE file for full text
  */
 
-#include <IGPIO.h>
+#include <GPIO.h>
 
 namespace MultiPing {
 
@@ -76,10 +76,13 @@ class Device {
     unsigned long usecMaxEchoStartDelay = 500ul;
     /// maximum microseonds to wait for a started echo to finish; NO_ECHO
     /// warning on timeout
-    unsigned long usecMaxEchoDuration = 60000ul;
+    unsigned long usecMaxEchoDuration = 60000ul - 500ul;
 };
 
-enum InputModes { PULLUP, OPEN_COLLECTOR };
+enum InputModes {
+    PULLUP,         /// activate internal pullup resistor
+    OPEN_COLLECTOR  /// no internal pullup
+};
 
 /*********************************************************************
  * Generic two-wire ultrasonic sensor device-level manager
@@ -94,6 +97,10 @@ class GenericDevice : public Device {
 
     bool isEchoing() const { return echo.read(); }
 
+    /**
+     * At the start of a ping cycle, insure that the echo pin is in input mode
+     * with the configured pullup condition.
+     */
     void begin() const {
         echo.input();
         if (MODE == PULLUP) {
@@ -101,21 +108,32 @@ class GenericDevice : public Device {
         }
     }
 
+    /**
+     * To start a ping trigger, insure that the trigger pin is in output mode
+     * and low, then set high
+     */
     void beginTrigger() const {
         trigger.output();
         trigger.low();
         trigger.high();
     }
 
+    /**
+     * To finish a ping trigger, set the trigger pin low.  If the trigger and
+     * echo pins are the same, insure that the pin is in input configuration.
+     */
     void finishTrigger() const {
         trigger.low();
         if (TPIN == EPIN) {
-            echo.input();
+            begin();
         }
     }
 
     void finish() const {}
 
+    /**
+     * Sometimes if a sensor is hung, outputing low on the echo pin helps.
+     */
     void reset() const {
         trigger.low();
         echo.output();
@@ -127,8 +145,15 @@ class GenericDevice : public Device {
     GPIO<EPIN> echo;
 };
 
+/** Default2PinDevice<TPIN, EPIN, MODE>
+ * Wrapper to use the Generic device in two-pin mode; defaulting to open collector operation.
+ */
 template <BOARD::pin_t TPIN, BOARD::pin_t EPIN, InputModes MODE = OPEN_COLLECTOR>
 using Default2PinDevice = GenericDevice<TPIN, EPIN, MODE>;
+
+/** Default1PinDevice<PIN, MODE>
+ * Wrapper to use the Generic device in one-pin mode; defaulting to open collector operation.
+ */
 template <BOARD::pin_t PIN, InputModes MODE = OPEN_COLLECTOR>
 using Default1PinDevice = GenericDevice<PIN, PIN, MODE>;
 

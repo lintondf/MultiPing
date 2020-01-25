@@ -13,22 +13,7 @@
  * A library for handling multiple ultrasonic sensors via multitasking
  *********************************************************************/
 
-#if defined(ARDUINO) && ARDUINO >= 100
 #include <Arduino.h>
-#else
-#include <WProgram.h>
-#if defined(PARTICLE)
-#include <SparkIntervalTimer.h>
-#else
-#include <pins_arduino.h>
-#endif
-#endif
-
-#if defined(__AVR__)
-#include <avr/interrupt.h>
-#include <avr/io.h>
-//#include <avr/pgmspace.h>
-#endif
 
 #include <MultiPingDevice.h>
 #include <MultiPingUnits.h>

@@ -1,5 +1,6 @@
 #include <MultiPing.h>
 
+
 #include <MultiPingTrace.h>
 
 #if _MULTIPING_DEBUG_
@@ -143,19 +144,19 @@ bool Sonar::triggerWaitEchoStarted(unsigned long now) {
 
 bool Sonar::waitEchoComplete(unsigned long now) {
     now = micros();
-    if (device->isEchoing()) {                 // Wait for ping to finished
-        if (lessThanUnsigned(timeout, now)) {  // Took too long to finish, abort.
+    if (lessThanUnsigned(timeout, now)) {  // Took too long to finish, abort.
 #if _MULTIPING_DEBUG_
-            if (dbg)
-                dbg->printf("no return %2d %8lu %8lu %8lu\n", getId(), now, timeout,
-                            unsignedDistance(now, echoStart));
+        if (dbg)
+            dbg->printf("no return %2d %8lu %8lu %8lu\n", getId(), now, timeout,
+                        unsignedDistance(now, echoStart));
 #endif
-            if (handler) handler->event(this, NO_PING);
-            device->reset();
-            state = States::START_PING;
-            recycle(now);
-            return true;
-        }
+        if (handler) handler->event(this, NO_PING);
+        device->reset();
+        state = States::START_PING;
+        recycle(now);
+        return true;
+    }
+    if (device->isEchoing()) {                 // Wait for ping to finished
         return false;
     }
 #if _MULTIPING_DEBUG_
@@ -163,7 +164,15 @@ bool Sonar::waitEchoComplete(unsigned long now) {
         dbg->printf("echo rx %2d %8lu %8lu %8lu\n", getId(), now, timeout,
                     unsignedDistance(now, echoStart));
 #endif
-    if (handler) handler->event(this, unsignedDistance(now, echoStart) / 2);  // report one-way time
+    unsigned long oneWay = unsignedDistance(now, echoStart) / 2;
+    if (oneWay > 40000ul) {
+        Serial.print( oneWay); Serial.print(" "); 
+        Serial.print( echoStart); Serial.print(" "); 
+        Serial.print( now ); Serial.print(" "); 
+        Serial.print(   device->usecMaxEchoDuration );      
+        Serial.println();
+    }
+    if (handler) handler->event(this, oneWay);  // report one-way time
     state = States::START_PING;
     recycle(now);
     return true;
@@ -197,40 +206,5 @@ unsigned long Sonar::check() {
     }
     return unsignedDistance(now, micros() - device->usecMaxEchoDuration);
 }
-
-int Units::iSoS = (0 + 30) / 5;
-int Units::cT = 0;
-const Units::SoS_t Units::speedOfSound[nSoS] = {
-    {312, 512}, {315, 709}, {318, 873}, {322, 7},   {325, 110}, {328, 185},
-    {331, 230}, {334, 248}, {337, 239}, {340, 203}, {343, 142}, {346, 56},
-    {348, 946}, {351, 812}, {354, 655}, {357, 475}, {360, 273}};
-
-void Units::setTemperature(int dC) {
-    dC = (-30 > dC) ? -30 : dC;
-    dC = (+50 < dC) ? +50 : dC;
-    cT = dC;
-    iSoS = (dC + 30) / 5;
-}
-
-float Units::us2m(unsigned long us) {
-    float dT = ((float)cT) - (5.0 * (float)iSoS - 30.0);
-    float a;
-    if (iSoS + 1 < nSoS) {
-        a = (float)speedOfSound[iSoS].ms + 0.001 * (float)speedOfSound[iSoS].mms;
-        float b = (float)speedOfSound[iSoS + 1].ms + 0.001 * (float)speedOfSound[iSoS + 1].mms;
-        a = a + dT * (b - a) / 5.0;
-    } else {
-        a = (float)speedOfSound[iSoS - 1].ms + 0.001 * (float)speedOfSound[iSoS - 1].mms;
-        float b = (float)speedOfSound[iSoS].ms + 0.001 * (float)speedOfSound[iSoS].mms;
-        a = b + dT * (b - a) / 5.0;
-    }
-    return a * 1e-6 * (float)us;
-}
-
-float Units::us2cm(unsigned long us) { return 100.0 * us2m(us); }
-
-float Units::us2ft(unsigned long us) { return us2m(us) / 0.3048; }
-
-float Units::us2in(unsigned long us) { return 12.0 * us2ft(us); }
 
 }  // namespace MultiPing

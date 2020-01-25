@@ -357,7 +357,7 @@ void Task::run() {
             if (dbg)
                 dbg->printf("slow %8lu/%8lu: %d\n", now, cycleCount,
                             task->getId());
-#endif                                
+#endif                
             task->dispatch(now);
         }
     }
@@ -378,7 +378,7 @@ void Task::run() {
         task->dispatch(now);
     }
 
-    // scan all sensors for any waiting pin events; once per cycle
+    // scan all tasks for any waiting pin events; once per cycle
     Task* task = all;
     while (task != nullptr) {
         if (task->waiting) {

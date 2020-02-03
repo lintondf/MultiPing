@@ -137,7 +137,7 @@ void TaskList::dump() {
     if (Task::dbg) {
         Task::dbg->printf("TaskList %d h %8lx t %8lx\n", count,
                           (unsigned long)head, (unsigned long)tail);
-        for (Iterator it = begin(); it != end(); it++) {
+        for (Iterator it = begin(); it != end(); ++it) {
             // it.dump();
             (*it)->dump("  ");
         }

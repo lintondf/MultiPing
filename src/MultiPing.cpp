@@ -57,7 +57,7 @@ static const char* stateNames[] = {
 #endif
 
 bool Sonar::dispatch(unsigned long now) {
-#if _MULTIPING_DEBUG_
+#if _MULTIPING_DEBUG_ > 2
     if (state != IDLE)
         if (dbg)
             dbg->printf("%8lu dispatch %d: [%d] %s\n", now, getId(), (int)state,
@@ -83,6 +83,8 @@ bool Sonar::dispatch(unsigned long now) {
 
 bool Sonar::triggerStartPing(unsigned long now) {
     // TRACE_TIMESTAMP( 1, getId() );
+    // Serial.print(getId()); Serial.print(" ");
+    // Serial.println( now % (3ul*device->usecMaxEchoDuration));
     device->begin();
     state = States::WAIT_LAST_FINISHED;
     enqueueShort(device->usecWaitEchoLowTimeout);
@@ -92,7 +94,7 @@ bool Sonar::triggerStartPing(unsigned long now) {
 bool Sonar::triggerWaitLastFinished(unsigned long now) {
     if (device->isEchoing()) {  // Previous ping hasn't finished, abort.
 #if _MULTIPING_DEBUG_
-        if (dbg) dbg->printf("Failed %8lu: %u\n", now, echo.read());
+        if (dbg) dbg->printf("Failed %8lu\n", now );
 #endif
         if (handler) handler->error(this, STILL_PINGING);
         state = States::START_PING;
@@ -111,7 +113,7 @@ bool Sonar::triggerWaitTriggerPulse(unsigned long now) {
     // Maximum time we'll wait for ping to start
     state = States::WAIT_ECHO_STARTED;
     waitEvent(true);
-#if _MULTIPING_DEBUG_
+#if _MULTIPING_DEBUG_ > 1
     if (dbg) dbg->printf("waiting trigger %d\n", getId());
 #endif
     return true;
@@ -134,7 +136,7 @@ bool Sonar::triggerWaitEchoStarted(unsigned long now) {
     now = micros();
     echoStart = now;
     timeout = now + device->usecMaxEchoDuration;
-#if _MULTIPING_DEBUG_
+#if _MULTIPING_DEBUG_ > 1
     if (dbg) dbg->printf("echo start %2d %8lu %8lu\n", getId(), now, timeout);
 #endif
     state = States::WAIT_ECHO;
@@ -159,7 +161,7 @@ bool Sonar::waitEchoComplete(unsigned long now) {
     if (device->isEchoing()) {                 // Wait for ping to finished
         return false;
     }
-#if _MULTIPING_DEBUG_
+#if _MULTIPING_DEBUG_ > 1
     if (dbg)
         dbg->printf("echo rx %2d %8lu %8lu %8lu\n", getId(), now, timeout,
                     unsignedDistance(now, echoStart));

@@ -12,7 +12,9 @@
 #include <MultiPingTrace.h>
 
 namespace MultiPing {
-Stream* Trace::out = nullptr;
+StreamEx* Trace::out = nullptr;
+bool Trace::stopAfterDump = false;
+int Trace::lowMemory = 0;
 Trace::TraceBlock* Trace::head = nullptr;
 Trace::TraceBlock* Trace::tail = nullptr;
 Trace::States Trace::state = Trace::MULTIPING_TRACE_STOPPED;

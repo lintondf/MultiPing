@@ -2,7 +2,7 @@
 #define _MULTIPING_TASK_H 1
 
 #define _MULTIPING_DEBUG_ 0
-
+// TODO:  run return time to next
 /*
  * Attribution: https://learn.adafruit.com/memories-of-an-arduino/measuring-free-memory; 
  */
@@ -145,7 +145,7 @@ class Task {
     static TaskList& getLongQueue() { return slowQueue; }
     static bool lessThan(Task* lhs, Task* rhs);
 
-    static void run();
+    static unsigned long run();
     static void report();
     static void print(unsigned long now);
     static void setDebugOutput(StreamEx* dbg) { Task::dbg = dbg; }

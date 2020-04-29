@@ -2,7 +2,7 @@
 //#include <AUnitVerbose.h>
 using namespace aunit;
 
-#include <Task.h>
+#include <MultiPingTask.h>
 #undef __GXX_EXPERIMENTAL_CXX0X__  // otherwise GPIO::SFR bit shifts confused with << or >> streaming operators
 #include <PrintEx.h>
 static StreamEx out(Serial);

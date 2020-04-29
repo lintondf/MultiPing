@@ -168,11 +168,11 @@ bool Sonar::waitEchoComplete(unsigned long now) {
 #endif
     unsigned long oneWay = unsignedDistance(now, echoStart) / 2;
     if (oneWay > 40000ul) {
-        Serial.print( oneWay); Serial.print(" "); 
-        Serial.print( echoStart); Serial.print(" "); 
-        Serial.print( now ); Serial.print(" "); 
-        Serial.print(   device->usecMaxEchoDuration );      
-        Serial.println();
+        // Serial.print( oneWay); Serial.print(" "); 
+        // Serial.print( echoStart); Serial.print(" "); 
+        // Serial.print( now ); Serial.print(" "); 
+        // Serial.print(   device->usecMaxEchoDuration );      
+        // Serial.println();
     }
     if (handler) handler->event(this, oneWay);  // report one-way time
     state = States::START_PING;

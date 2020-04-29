@@ -90,9 +90,9 @@ void setup() {
   Serial.begin(115200);
   while (!Serial) ;
   Serial.println("Sensor Calibration");
-  MultiPing::Units::setTemperature( (int) 5.0 / 9.5 * (71.0 - 32.0) );
-  a = MultiPing::Units::us2in(1ul);
-  Serial.print( 1e6*a ); Serial.println( " in/s" );
+  //MultiPing::Units::setTemperature( (int) 5.0 / 9.5 * (71.0 - 32.0) );
+  //a = MultiPing::Units::us2in(1ul);
+  //Serial.print( 1e6*a ); Serial.println( " in/s" );
 
   //  device = new BaseTwoPinPullup<BOARD::D22, BOARD::D23>(); //TODO FAILS
   // device = new MultiPing::Default2PinDevice<BOARD::D54, BOARD::D55>();

@@ -17,7 +17,7 @@
 
 #include <MultiPingDevice.h>
 #include <MultiPingUnits.h>
-#include <Task.h>  //TODO  ->MultiPingTask
+#include <MultiPingTask.h>
 
 namespace MultiPing {
 

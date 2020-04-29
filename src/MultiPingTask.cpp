@@ -1,4 +1,4 @@
-#include <Task.h>
+#include <MultiPingTask.h>
 
 
 #if _MULTIPING_DEBUG_
@@ -333,7 +333,7 @@ void Task::print(unsigned long now) {
 #endif
 }
 
-void Task::run() {
+unsigned long Task::run() {
     unsigned long now = micros();
 #if _MULTIPING_DEBUG_ > 0
     if (cycleCount == 0L) {
@@ -392,6 +392,13 @@ void Task::run() {
         }
         task = task->nextTask;
     }
+    if (!fastQueue.isEmpty()) return 0ul;  // no time to lose
+    now = micros();
+    if (slowQueue.isEmpty()) {
+        return now + (1ul / 2ul); // all the time in the world
+    }
+    if (Task::ready(now, slowQueue.peek())) return 0ul;  // no time to lose
+    return Task::usecRemaining( now, slowQueue.peek() );
 }
 
 bool Task::lessThan(Task* lhs, Task* rhs) {
